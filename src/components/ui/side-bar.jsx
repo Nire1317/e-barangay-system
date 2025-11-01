@@ -12,6 +12,7 @@
     import { Link } from "react-router-dom";
     // import { NavUser } from "./nav-user";
     // import { SidebarProvider } from "./ui/sidebar";
+    import NavSidebar from "./nav-sidebar";
 
     export default function AppSideBar({ children }) {
     const [isOpen, setIsOpen] = useState(true); // desktop state
@@ -67,7 +68,6 @@
     }, []);
 
     const SidebarContent = (
-
         <div
         className={`flex flex-col h-full bg-white border-r border-gray-200 text-gray-900 font-sans text-sm transition-all duration-300
             ${isOpen && !isMobile ? "w-51" : "w-16"} ${isMobile ? "w-56" : ""}`}
@@ -87,7 +87,7 @@
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 mt-3 space-y-1">
+    <nav className="flex flex-col flex-1 mt-3 px-2">
             {menuItems.map((item, index) => (
             <Link
                 key={index}
@@ -106,7 +106,7 @@
                 )}
             </Link>
             ))}
-        </nav>
+    </nav>
 
         {/* NavUser fixed at bottom with no extra space */}
         {/* <div className="border-t border-gray-200 p-3 h-17">
@@ -114,7 +114,10 @@
             <NavUser />
             </SidebarProvider>
         </div> */}
+        <div className="border-t border-gray-200 px-3 py-2 flex items-center justify-center">
+            <NavSidebar />
         </div>
+</div>
     );
 
     return (

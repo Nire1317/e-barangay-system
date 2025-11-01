@@ -5,6 +5,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PermissionGate } from "../../components/PermissionGate";
 import { PERMISSIONS } from "../../config/rbac";
 import AppSideBar from "../../components/ui/side-bar";
+import { LayoutDashboard } from "lucide-react";
 
 function Dashboard() {
   const { user, signOut } = useAuth();
@@ -19,23 +20,29 @@ function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <h1 className="text-xl font-bold text-blue-600">
-              E-Barangay System
+              <LayoutDashboard size={18} />
             </h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                {user?.fullName} ({roleName})
-              </span>
-              <button
+              <div className="flex flex-col text-gray-800">
+                <h2 className="text-lg font-semibold">
+                  Welcome back, <span className="text-black font-bold">{user?.fullName}</span>!
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Role: <span className="font-medium text-gray-700">{roleName}</span>
+                </p>
+              </div>
+
+              {/* <button
                 onClick={signOut}
                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
               >
                 Sign Out
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
       </nav>
-      
+
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h2 className="text-2xl font-bold mb-6 text-gray-800">
             Resident Dashboard
