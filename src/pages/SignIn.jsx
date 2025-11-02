@@ -72,11 +72,25 @@ export default function SignIn() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      <form
-        onSubmit={handleAuth}
-        className="bg-white p-6 rounded-xl shadow-lg w-80"
-      >
+<div className="flex items-center justify-center h-screen bg-gray-100">
+  <div className="flex gap-0">
+    <form className="bg-blue-400 p-6 rounded-l-xl w-80 h-[420px] flex items-center justify-center">
+      <div className=" p-4 rounded-md text-sm text-black w-full text-center">
+        <h1 className="text-2xl font-bold mb-4 text-gray-800">
+          Barangay Online Services System (BOSS)
+        </h1>
+        <p className="text-gray-600 leading-relaxed">
+          Access essential barangay services conveniently from your home. 
+          Sign in to manage requests, view updates, or create a new account to get started.
+        </p>
+      </div>
+    </form>
+
+    <form
+      onSubmit={handleAuth}
+      className="bg-gray-200 p-6 rounded-r-xl w-80 h-[420px] flex flex-col justify-center">
+    
+      <div>
         <h2 className="text-xl font-semibold mb-4 text-center">
           {isSignUp ? "Create Account" : "Sign In"}
         </h2>
@@ -102,6 +116,7 @@ export default function SignIn() {
           required
           disabled={loading}
         />
+
         <input
           type="password"
           placeholder="Password"
@@ -112,6 +127,7 @@ export default function SignIn() {
           minLength={6}
           disabled={loading}
         />
+
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
@@ -119,7 +135,9 @@ export default function SignIn() {
         >
           {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
         </button>
+      </div>
 
+      <div>
         <p className="text-center mt-3 text-sm">
           {isSignUp ? "Already have an account?" : "Don't have an account?"}
           <button
@@ -143,7 +161,9 @@ export default function SignIn() {
             {message}
           </p>
         )}
-      </form>
-    </div>
+      </div>
+    </form>
+  </div>
+</div>
   );
 }
