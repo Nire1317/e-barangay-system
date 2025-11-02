@@ -1,9 +1,12 @@
 import { useState, useCallback} from "react";
 import { LogOut, Settings } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
+import { usePermissions } from "../../hooks/usePermissions";
 
 
 export default function NavSidebar({ onSignOut }) {
     const [showModal, setShowModal] = useState(false);
+    const { user, signOut } = useAuth();
     
     return (
         <div className="w-full">
@@ -43,7 +46,7 @@ export default function NavSidebar({ onSignOut }) {
                 Cancel
             </button>
             <button
-                onClick={onSignOut}
+                onClick={signOut}
                 className="w-1/2 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors"
             >
                 Sign Out

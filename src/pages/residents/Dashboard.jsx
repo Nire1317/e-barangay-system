@@ -12,15 +12,14 @@ function Dashboard() {
   const { roleName } = usePermissions();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <AppSideBar />
-
-      <div className="flex-1">
+<div className="min-h-screen bg-gray-50 flex">
+  <AppSideBar />
+  <div className="flex-1">
     <nav className="bg-white shadow w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <h1 className="text-xl font-bold text-blue-600">
-              <LayoutDashboard size={18} />
+            <h1 className="text-xl font-bold text-black flex justify-end gap-2">
+              
             </h1>
             <div className="flex items-center gap-4">
               <div className="flex flex-col text-gray-800">
