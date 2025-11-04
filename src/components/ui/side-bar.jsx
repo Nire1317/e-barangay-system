@@ -51,11 +51,11 @@ const OFFICIAL_MENU_ITEMS = [
     icon: LayoutDashboard,
     path: "/dashboard",
   },
-  {
-    name: "All Requests",
-    icon: FolderOpen,
-    path: "/requests",
-  },
+  // {
+  //   name: "All Requests",
+  //   icon: FolderOpen,
+  //   path: "/requests",
+  // },
   {
     name: "Manage Requests",
     icon: FileText,

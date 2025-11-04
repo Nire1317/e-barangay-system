@@ -1,8 +1,10 @@
 // src/components/ProtectedRoute.jsx
 
 import { Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { canAccessRoute } from "../utils/permissions";
+import { updateFaviconAndTitleByRole } from "../utils/favicon";
 
 /**
  * ProtectedRoute - Restricts access based on authentication and role
@@ -18,6 +20,13 @@ export const ProtectedRoute = ({
 }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
+
+  // Update favicon and title based on user role
+  useEffect(() => {
+    if (user?.role) {
+      updateFaviconAndTitleByRole(user.role);
+    }
+  }, [user?.role]);
 
   // Show loading state while checking authentication
   if (loading) {

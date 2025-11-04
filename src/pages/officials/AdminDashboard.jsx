@@ -32,7 +32,7 @@ const QUICK_ACTIONS = [
   {
     label: "View All Requests",
     icon: ClipboardIcon,
-    path: "/requests",
+    path: "/manage-requests",
     variant: "default",
     description: "Manage document requests",
   },
@@ -137,20 +137,17 @@ const NavigationHeader = ({ user, roleName }) => (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between h-14.5 items-center">
         <div className="flex items-center gap-3">
-          {/* <div className="w-8 h-8 bg-linear-to-br from-slate-900 to-slate-700 rounded-lg flex items-center justify-center shadow-lg">
-            <ActivityIcon className="w-5 h-5 text-white" />
-          </div> */}
-          <h1 className="text-xl font-semibold text-slate-900">
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
             Official Dashboard
           </h1>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-medium text-slate-900">
+            <p className="text-sm font-semibold text-slate-900 leading-tight">
               {user?.fullName || "Admin"}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-600 font-medium leading-tight mt-0.5">
               {roleName || "Administrator"}
             </p>
           </div>
@@ -163,8 +160,10 @@ const NavigationHeader = ({ user, roleName }) => (
 // Page header component
 const PageHeader = () => (
   <div className="mb-8">
-    <h2 className="text-3xl font-bold text-slate-900">Dashboard</h2>
-    <p className="text-slate-500 mt-1">
+    <h2 className="text-4xl font-bold text-slate-900 tracking-tight leading-tight">
+      Dashboard
+    </h2>
+    <p className="text-base text-slate-600 mt-2 font-medium">
       Welcome back! Here's what's happening today.
     </p>
   </div>
@@ -172,10 +171,11 @@ const PageHeader = () => (
 
 // Permission notice component
 const PermissionNotice = () => (
-  <div className="mt-8 mb-4 p-6 bg-amber-50 border border-amber-200 rounded-lg">
-    <p className="text-sm text-amber-800">
-      <strong>Note:</strong> Some dashboard features require official
-      permissions. Contact your administrator if you need access.
+  <div className="mt-8 mb-6 p-6 bg-amber-50 border border-amber-200 rounded-lg">
+    <p className="text-sm text-amber-900 leading-relaxed">
+      <strong className="font-semibold">Note:</strong> Some dashboard features
+      require official permissions. Contact your administrator if you need
+      access.
     </p>
   </div>
 );

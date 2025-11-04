@@ -9,7 +9,9 @@ import { ROLES } from "../config/rbac";
 import SignIn from "../pages/SignIn";
 import NotFound from "../pages/NotFound";
 import Dashboard from "../pages/residents/Dashboard";
+// Official Pages
 import AdminDashboard from "../pages/officials/AdminDashboard";
+import ManageRequests from "../pages/officials/ManageRequest";
 
 const AppRouter = () => {
   return (
@@ -42,6 +44,14 @@ const AppRouter = () => {
             element={
               <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-requests"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+                <ManageRequests />
               </ProtectedRoute>
             }
           />
