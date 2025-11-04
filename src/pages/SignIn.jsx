@@ -10,19 +10,20 @@ import {
   EyeOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../hooks/useAuth";
 
 // Mock auth hook for demo
-const useAuth = () => ({
-  signIn: async (email, password) => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return { error: null };
-  },
-  signUp: async (email, password, name) => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return { error: null };
-  },
-  user: null,
-});
+// const useAuth = () => ({
+//   signIn: async (email, password) => {
+//     await new Promise((resolve) => setTimeout(resolve, 1000));
+//     return { error: null };
+//   },
+//   signUp: async (email, password, name) => {
+//     await new Promise((resolve) => setTimeout(resolve, 1000));
+//     return { error: null };
+//   },
+//   user: null,
+// });
 
 // Enhanced Input Field with focus states and validation feedback
 function InputField({
