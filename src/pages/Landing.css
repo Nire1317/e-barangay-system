@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+.landing-page * {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Shadcn-like Primary Color Gradient (Deep Purple/Indigo) */
+.gradient-text {
+  /* Using a deep primary color for a sophisticated, modern look */
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); /* Indigo-600 to Indigo-500 */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Simplified animated gradient with muted colors */
+.animated-gradient {
+  background: linear-gradient(-45deg, #4f46e5, #6366f1, #8b5cf6, #3b82f6); /* Muted Purples/Blues */
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); } /* Reduced float distance for subtlety */
+}
+
+/* Keep animations but ensure they are subtle */
+.slide-in-left {
+  animation: slideInLeft 0.7s cubic-bezier(0.16, 1, 0.3, 1); /* Smoother timing function */
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px); /* Reduced slide distance */
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Minimalist Glass Effect - highly subtle */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.05); /* Very low opacity */
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Thin, subtle border */
+}
+
+/* Simplified hover lift (less dramatic) */
+.hover-lift {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px); /* Reduced lift */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05); /* Lighter, less pronounced shadow */
+}
+
+.stat-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.feature-icon {
+  transition: all 0.3s ease;
+}
+
+/* Subtle icon hover effect */
+.feature-card:hover .feature-icon {
+  transform: scale(1.05); /* Reduced scale */
+}
+
+/* Primary Button Styling - Minimal, solid fill look */
+.btn-primary {
+  background: #4f46e5; /* Solid Indigo-600 */
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: none; /* Removed initial shadow */
+  border: 1px solid transparent; /* Prepare for hover border */
+}
+
+.btn-primary:hover {
+  transform: none; /* No lift on hover */
+  background: #4338ca; /* Darker Indigo-700 on hover */
+  box-shadow: none; /* No shadow on hover */
+}
+
+.pulse-dot {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.scroll-indicator {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px); /* Reduced bounce distance */
+  }
+}

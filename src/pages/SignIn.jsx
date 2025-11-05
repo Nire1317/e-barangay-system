@@ -518,7 +518,7 @@ export default function SignIn() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          © 2024 Barangay Online Services System. All rights reserved.
+          © 2025 Barangay Online Services System. All rights reserved.
         </motion.p>
       </div>
     </div>

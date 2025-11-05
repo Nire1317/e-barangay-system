@@ -50,7 +50,7 @@ const OFFICIAL_MENU_ITEMS = [
     name: "Dashboard",
     icon: LayoutDashboard,
     path: "/dashboard",
-  },
+  },    
   // {
   //   name: "All Requests",
   //   icon: FolderOpen,
@@ -79,7 +79,7 @@ const OFFICIAL_MENU_ITEMS = [
   {
     name: "Admin Panel",
     icon: Shield,
-    path: "/admin",
+    path: "/official-panel",
   },
   {
     name: "Settings",

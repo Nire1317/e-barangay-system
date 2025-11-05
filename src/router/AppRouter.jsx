@@ -5,13 +5,20 @@ import { AuthProvider } from "../hooks/useAuth";
 import { ProtectedRoute, PublicRoute } from "../components/ProtectedRoute";
 import { ROLES } from "../config/rbac";
 
-// Pages
+// Public Pages
+import Landing from "../pages/Landing";
 import SignIn from "../pages/SignIn";
 import NotFound from "../pages/NotFound";
+// Resident Pages
 import Dashboard from "../pages/residents/Dashboard";
+
 // Official Pages
 import AdminDashboard from "../pages/officials/AdminDashboard";
 import ManageRequests from "../pages/officials/ManageRequest";
+import Residents from "../pages/officials/Residents";
+import ReportsAdminPage from "../pages/officials/ReportsAdminPage";
+import AdminPanelPage from "../pages/officials/AdminPanelPage";
+import Settings from "../pages/officials/SettingsAdminPage";
 
 const AppRouter = () => {
   return (
@@ -19,6 +26,15 @@ const AppRouter = () => {
       <AuthProvider>
         <Routes>
           {/* Public Routes */}
+          <Route
+            path="/"
+            element={
+              <PublicRoute>
+                <Landing />
+              </PublicRoute>
+            }
+          />
+
           <Route
             path="/signin"
             element={
@@ -55,9 +71,40 @@ const AppRouter = () => {
               </ProtectedRoute>
             }
           />
-
+          <Route
+            path="/residents"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+                <Residents />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+                <ReportsAdminPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/official-panel"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+                <AdminPanelPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
           {/* Add more protected routes here as needed */}
-          {/* Example:
+          {/*
           <Route 
             path="/requests" 
             element={
