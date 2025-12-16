@@ -81,7 +81,6 @@ const tabs = [
 return ( <div>
 {/* Page Header */} <div className="bg-white rounded-xl shadow-lg p-6 mb-6"> <h2 className="text-2xl font-bold text-gray-800">Settings</h2> <p className="text-gray-600 mt-1">Manage your account and system preferences</p> </div>
 
-```
   <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">  
     {/* Sidebar Navigation */}  
     <div className="lg:col-span-1">  
@@ -93,7 +92,7 @@ return ( <div>
               <button  
                 key={tab.id}  
                 onClick={() => setActiveTab(tab.id)}  
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${activeTab === tab.id ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}  
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-2 ${activeTab === tab.id ? 'bg-linear-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}  
               >  
                 <Icon className="w-5 h-5" />  
                 <span className="font-semibold">{tab.label}</span>  
