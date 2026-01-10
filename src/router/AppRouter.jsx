@@ -11,6 +11,8 @@ import SignIn from "../pages/SignIn";
 import NotFound from "../pages/NotFound";
 // Resident Pages
 import Dashboard from "../pages/residents/Dashboard";
+import JoinBarangayPage from "../pages/residents/JoinBarangayPage";
+import MyRequestsPage from "../pages/residents/MyRequestsPage";
 
 // Official Pages
 import AdminDashboard from "../pages/officials/AdminDashboard";
@@ -50,6 +52,22 @@ const AppRouter = () => {
             element={
               <ProtectedRoute allowedRoles={[ROLES.RESIDENT]}>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/join-barangay"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.RESIDENT]}>
+                <JoinBarangayPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/requests"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.RESIDENT]}>
+                <MyRequestsPage />
               </ProtectedRoute>
             }
           />

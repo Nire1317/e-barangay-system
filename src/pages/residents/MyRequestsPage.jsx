@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Clock, CheckCircle, XCircle, AlertCircle, MapPin, X } from "lucide-react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { useBarangayRequests } from "../../hooks/useBarangayRequests";
+import RequestStatusBadge from "../../components/barangay/RequestStatusBadge";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -172,6 +174,151 @@ const RequestDetailsModal = ({ isOpen, onClose, request }) => {
   );
 };
 
+// --- Barangay Request Details Modal ---
+const BarangayRequestDetailsModal = ({ isOpen, onClose, request, onCancel }) => {
+  if (!isOpen || !request) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <div className="flex items-center gap-3 mb-2">
+            <MapPin className="w-8 h-8" />
+            <h2 className="text-2xl font-bold">Barangay Request Details</h2>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="mb-6">
+            <RequestStatusBadge status={request.status} size="lg" />
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-5 mb-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">
+              Barangay Information
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  Barangay Name
+                </p>
+                <p className="text-gray-900 font-semibold text-lg">
+                  {request.barangays?.barangay_name || 'N/A'}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                    Municipality
+                  </p>
+                  <p className="text-gray-900">
+                    {request.barangays?.municipality || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                    Province
+                  </p>
+                  <p className="text-gray-900">
+                    {request.barangays?.province || 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  Region
+                </p>
+                <p className="text-gray-900">
+                  {request.barangays?.region || 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div className="bg-gray-50 rounded-xl p-5 mb-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Timeline</h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="bg-blue-100 rounded-full p-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Requested On
+                  </p>
+                  <p className="text-gray-900 font-semibold">
+                    {new Date(request.requested_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {request.reviewed_at && (
+                <div className="flex items-start gap-3">
+                  <div className={`rounded-full p-2 ${
+                    request.status === 'Approved' ? 'bg-green-100' : 'bg-red-100'
+                  }`}>
+                    {request.status === 'Approved' ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Reviewed On
+                    </p>
+                    <p className="text-gray-900 font-semibold">
+                      {new Date(request.reviewed_at).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Rejection Reason */}
+          {request.status === 'Rejected' && request.rejection_reason && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6">
+              <h3 className="text-lg font-bold text-red-800 mb-2">
+                Rejection Reason
+              </h3>
+              <p className="text-red-700">{request.rejection_reason}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-200 p-4 bg-gray-50 flex gap-3">
+          {request.status === 'Pending' && (
+            <button
+              onClick={() => onCancel(request.request_id)}
+              className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+            >
+              Cancel Request
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Main Component ---
 const MyRequestsPage = () => {
   const [myRequests, setMyRequests] = useState([]);
@@ -180,6 +327,17 @@ const MyRequestsPage = () => {
   const [userId, setUserId] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedBarangayRequest, setSelectedBarangayRequest] = useState(null);
+  const [isBarangayModalOpen, setIsBarangayModalOpen] = useState(false);
+
+  // Use barangay requests hook
+  const {
+    requests: barangayRequests,
+    loading: barangayLoading,
+    error: barangayError,
+    fetchUserRequests,
+    cancelRequest,
+  } = useBarangayRequests();
 
   // --- GET LOGGED-IN USER ---
   useEffect(() => {
@@ -197,6 +355,7 @@ const MyRequestsPage = () => {
 
       setUserId(user.id);
       fetchRequests(user.id);
+      fetchUserRequests(); // Fetch barangay requests
     };
 
     fetchUser();
@@ -235,6 +394,29 @@ const MyRequestsPage = () => {
     setSelectedRequest(null);
   };
 
+  const openBarangayModal = (request) => {
+    setSelectedBarangayRequest(request);
+    setIsBarangayModalOpen(true);
+  };
+  const closeBarangayModal = () => {
+    setIsBarangayModalOpen(false);
+    setSelectedBarangayRequest(null);
+  };
+
+  // Handle cancel barangay request
+  const handleCancelBarangayRequest = async (requestId) => {
+    if (!window.confirm('Are you sure you want to cancel this barangay request?')) {
+      return;
+    }
+
+    try {
+      await cancelRequest(requestId);
+      closeBarangayModal();
+    } catch (err) {
+      console.error('Error cancelling request:', err);
+    }
+  };
+
   // --- STATUS BADGES ---
   const getStatusColor = (status) => {
     switch (status) {
@@ -263,7 +445,7 @@ const MyRequestsPage = () => {
   };
 
   // --- LOADING & ERROR ---
-  if (loading)
+  if (loading || barangayLoading)
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -296,6 +478,94 @@ const MyRequestsPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-8">
+
+        {/* --- BARANGAY REQUESTS SECTION --- */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <MapPin className="w-6 h-6 text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-800">
+                My Barangay Requests
+              </h2>
+            </div>
+            <p className="text-gray-600 mt-1">
+              Track your barangay membership requests
+            </p>
+          </div>
+
+          {barangayError && (
+            <div className="p-4 bg-red-50 border-b border-red-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <p className="text-sm text-red-700">{barangayError}</p>
+              </div>
+            </div>
+          )}
+
+          {barangayRequests.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <MapPin className="w-16 h-16 mx-auto" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                No Barangay Requests Yet
+              </h3>
+              <p className="text-gray-600 mb-4">
+                You haven't submitted any barangay membership requests.
+              </p>
+              <a
+                href="/join-barangay"
+                className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+              >
+                Join a Barangay
+              </a>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {barangayRequests.map((request) => (
+                <div
+                  key={request.request_id}
+                  className="p-6 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <RequestStatusBadge status={request.status} />
+                      </div>
+
+                      <h3 className="font-semibold text-lg text-gray-800 mb-1">
+                        {request.barangays?.barangay_name || 'Unknown Barangay'}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-1">
+                        {request.barangays?.municipality}, {request.barangays?.province}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Requested on:{" "}
+                        {new Date(request.requested_at).toLocaleDateString()}
+                      </p>
+
+                      {request.status === 'Rejected' && request.rejection_reason && (
+                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm text-red-800">
+                            <span className="font-semibold">Reason: </span>
+                            {request.rejection_reason}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => openBarangayModal(request)}
+                      className="text-blue-600 hover:text-blue-800 font-semibold text-sm hover:underline whitespace-nowrap"
+                    >
+                      View Details →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* --- MY REQUESTS LIST --- */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -374,6 +644,14 @@ const MyRequestsPage = () => {
         isOpen={isModalOpen}
         onClose={closeModal}
         request={selectedRequest}
+      />
+
+      {/* --- BARANGAY REQUEST DETAILS MODAL --- */}
+      <BarangayRequestDetailsModal
+        isOpen={isBarangayModalOpen}
+        onClose={closeBarangayModal}
+        request={selectedBarangayRequest}
+        onCancel={handleCancelBarangayRequest}
       />
     </div>
   );

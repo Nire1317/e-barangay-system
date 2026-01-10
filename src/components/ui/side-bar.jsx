@@ -11,6 +11,7 @@ import {
   FileText,
   BarChart3,
   Shield,
+  MapPin,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -24,7 +25,12 @@ const BASE_MENU_ITEMS = [
     path: "/dashboard",
   },
   {
-    name: "My Request",
+    name: "Join Barangay",
+    icon: MapPin,
+    path: "/join-barangay",
+  },
+  {
+    name: "My Requests",
     icon: FolderOpen,
     path: "/requests",
   },

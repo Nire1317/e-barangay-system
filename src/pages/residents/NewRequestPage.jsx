@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Phone, Mail, MapPin, Calendar, AlertCircle, Send, CheckCircle, Loader } from 'lucide-react';
+import { FileText, Phone, Mail, MapPin, Calendar, AlertCircle, Send, CheckCircle, Loader, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabaseClient';
+import { useAuth } from '../../hooks/useAuth';
 
 const NewRequestPage = () => {
+  const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+
   const [formData, setFormData] = useState({
     firstName: '',
     middleName: '',
@@ -27,6 +32,7 @@ const NewRequestPage = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [hasBarangay, setHasBarangay] = useState(false);
 
   const documentTypes = [
     { value: 'barangay-clearance', label: 'Barangay Clearance', fee: '₱50.00' },
@@ -88,12 +94,17 @@ const NewRequestPage = () => {
         }
 
         setUser(currentUser);
-        
+
+        // Check if user has barangay from authUser
+        if (authUser?.barangayId) {
+          setHasBarangay(true);
+        }
+
         // Pre-fill email if available
         if (currentUser.email) {
           setFormData(prev => ({ ...prev, email: currentUser.email }));
         }
-        
+
         setLoadingUser(false);
       } catch (err) {
         console.error('Error fetching user:', err);
@@ -103,7 +114,7 @@ const NewRequestPage = () => {
     };
 
     fetchUser();
-  }, []);
+  }, [authUser]);
 
   const generateRequestId = () => {
     const timestamp = Date.now();
@@ -370,6 +381,30 @@ const NewRequestPage = () => {
         </div>
       )}
 
+      {/* Barangay Membership Alert */}
+      {!hasBarangay && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <Info className="w-6 h-6 text-amber-600 shrink-0 mt-1" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-900 mb-2">
+                Barangay Membership Required
+              </h3>
+              <p className="text-sm text-amber-800 mb-4">
+                You need to join a barangay before you can request documents. Please submit a barangay membership request first.
+              </p>
+              <button
+                onClick={() => navigate('/join-barangay')}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm"
+              >
+                <MapPin className="w-4 h-4" />
+                Join a Barangay Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-6 h-6 text-blue-600 shrink-0 mt-1" />
@@ -386,8 +421,10 @@ const NewRequestPage = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Select Document Type</h2>
+      {/* Only show document selection if user has barangay */}
+      {hasBarangay && (
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Select Document Type</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {documentTypes.map((doc) => (
             <button
@@ -413,9 +450,11 @@ const NewRequestPage = () => {
             </button>
           ))}
         </div>
-      </div>
+        </div>
+      )}
 
-      {formData.documentType && (
+      {/* Only show form if user has barangay */}
+      {hasBarangay && formData.documentType && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Personal Information</h2>
           

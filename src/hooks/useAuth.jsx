@@ -66,6 +66,8 @@ export const AuthProvider = ({ children }) => {
           fullName: data.full_name,
           role: data.role,
           createdAt: data.created_at,
+          barangayId: data.barangay_id,
+          isVerified: data.is_verified,
         });
       }
     } catch (error) {
