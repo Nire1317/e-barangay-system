@@ -10,6 +10,19 @@ CREATE TABLE public.activity_logs (
   CONSTRAINT activity_logs_pkey PRIMARY KEY (log_id),
   CONSTRAINT activity_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id)
 );
+CREATE TABLE public.barangay_requests (
+  request_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  barangay_id uuid NOT NULL,
+  status character varying DEFAULT 'Pending'::character varying CHECK (status::text = ANY (ARRAY['Pending'::character varying, 'Approved'::character varying, 'Rejected'::character varying]::text[])),
+  requested_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at timestamp without time zone,
+  rejection_reason text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT barangay_requests_pkey PRIMARY KEY (request_id),
+  CONSTRAINT barangay_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id),
+  CONSTRAINT barangay_requests_barangay_id_fkey FOREIGN KEY (barangay_id) REFERENCES public.barangays(barangay_id)
+);
 CREATE TABLE public.barangays (
   barangay_id uuid NOT NULL DEFAULT uuid_generate_v4(),
   barangay_name character varying NOT NULL UNIQUE,
@@ -18,6 +31,32 @@ CREATE TABLE public.barangays (
   region character varying NOT NULL,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT barangays_pkey PRIMARY KEY (barangay_id)
+);
+CREATE TABLE public.document_requests (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  request_id text NOT NULL UNIQUE,
+  user_id text NOT NULL,
+  document_type text NOT NULL,
+  purpose text NOT NULL,
+  date_requested timestamp with time zone DEFAULT now(),
+  status text DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])),
+  claim_date date,
+  estimated_release date,
+  rejection_reason text,
+  created_at timestamp with time zone DEFAULT now(),
+  first_name text,
+  middle_name text,
+  last_name text,
+  address text,
+  contact_number text,
+  email text,
+  birthdate date,
+  place_of_birth text,
+  civil_status text,
+  occupation text,
+  valid_id_type text,
+  ctc_number text,
+  CONSTRAINT document_requests_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.official_verifications (
   verification_id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -34,7 +73,7 @@ CREATE TABLE public.official_verifications (
 );
 CREATE TABLE public.request_types (
   type_id integer NOT NULL DEFAULT nextval('request_types_type_id_seq'::regclass),
-  type_name character varying NOT NULL,
+  type_name character varying NOT NULL UNIQUE,
   description text,
   CONSTRAINT request_types_pkey PRIMARY KEY (type_id)
 );

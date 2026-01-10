@@ -1,19 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Phone, Mail, MapPin, Calendar, AlertCircle, Send, CheckCircle, Loader } from 'lucide-react';
-
-// Initialize Supabase client
-const SUPABASE_URL = 'https://ubektynslrflctveqiut.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViZWt0eW5zbHJmbGN0dmVxaXV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MzIyNDEsImV4cCI6MjA3NzEwODI0MX0.VMPxOfxSICFJLqcxBbTHFhCr4TyxIbDrBih6GuvdRrM';
-
-let supabase = null;
-
-const initSupabase = async () => {
-  if (!supabase) {
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-  return supabase;
-};
+import { supabase } from '../../services/supabaseClient';
 
 const NewRequestPage = () => {
   const [formData, setFormData] = useState({
@@ -85,8 +72,7 @@ const NewRequestPage = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const client = await initSupabase();
-        const { data: { user: currentUser }, error } = await client.auth.getUser();
+        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
 
         if (error) {
           console.error('Auth error:', error);
@@ -120,9 +106,38 @@ const NewRequestPage = () => {
   }, []);
 
   const generateRequestId = () => {
-    const year = new Date().getFullYear();
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `REQ-${year}-${random}`;
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `REQ-${timestamp}-${random}`;
+  };
+
+  // Validation helpers
+  const validatePhoneNumber = (phone) => {
+    // Philippine mobile format: 09XX-XXX-XXXX or 09XXXXXXXXX
+    const phoneRegex = /^(09|\+639)\d{9}$/;
+    const cleaned = phone.replace(/[-\s]/g, '');
+    return phoneRegex.test(cleaned);
+  };
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateBirthdate = (birthdate) => {
+    if (!birthdate) return false;
+    const date = new Date(birthdate);
+    const today = new Date();
+    const age = today.getFullYear() - date.getFullYear();
+
+    // Must be at least 1 year old and not more than 150 years old
+    return age >= 1 && age <= 150 && date <= today;
+  };
+
+  const sanitizeInput = (input) => {
+    // Basic XSS prevention
+    if (!input) return input;
+    return input.replace(/[<>]/g, '');
   };
 
   const handleInputChange = (e) => {
@@ -139,6 +154,25 @@ const NewRequestPage = () => {
         return false;
       }
     }
+
+    // Validate phone number format
+    if (!validatePhoneNumber(formData.contact)) {
+      setSubmitError('Please enter a valid Philippine mobile number (e.g., 09171234567)');
+      return false;
+    }
+
+    // Validate email format
+    if (!validateEmail(formData.email)) {
+      setSubmitError('Please enter a valid email address');
+      return false;
+    }
+
+    // Validate birthdate
+    if (!validateBirthdate(formData.birthdate)) {
+      setSubmitError('Please enter a valid birthdate (must be at least 1 year old and not a future date)');
+      return false;
+    }
+
     if (!termsAccepted) {
       setSubmitError('Please accept the terms and conditions');
       return false;
@@ -148,7 +182,7 @@ const NewRequestPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     if (!user || !user.id) {
@@ -160,30 +194,48 @@ const NewRequestPage = () => {
     setSubmitError(null);
 
     try {
-      const client = await initSupabase();
+      // Check for duplicate pending requests
+      const { data: existingRequests, error: checkError } = await supabase
+        .from('document_requests')
+        .select('request_id, document_type')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .eq('document_type', documentTypes.find(doc => doc.value === formData.documentType)?.label);
+
+      if (checkError) {
+        console.error('Error checking for duplicates:', checkError);
+      }
+
+      if (existingRequests && existingRequests.length > 0) {
+        setSubmitError(`You already have a pending request for this document type (Request ID: ${existingRequests[0].request_id}). Please wait for it to be processed.`);
+        setSubmitting(false);
+        return;
+      }
+
       const newRequestId = generateRequestId();
       const selectedDoc = documentTypes.find(doc => doc.value === formData.documentType);
 
       const estimatedRelease = new Date();
       estimatedRelease.setDate(estimatedRelease.getDate() + 5);
 
+      // Sanitize all text inputs to prevent XSS
       const requestData = {
         request_id: newRequestId,
         user_id: user.id,
-        first_name: formData.firstName,
-        middle_name: formData.middleName || null,
-        last_name: formData.lastName,
-        address: formData.address,
-        contact_number: formData.contact,
-        email: formData.email,
+        first_name: sanitizeInput(formData.firstName),
+        middle_name: sanitizeInput(formData.middleName) || null,
+        last_name: sanitizeInput(formData.lastName),
+        address: sanitizeInput(formData.address),
+        contact_number: formData.contact.replace(/[-\s]/g, ''), // Store clean phone number
+        email: formData.email.toLowerCase().trim(),
         birthdate: formData.birthdate,
-        place_of_birth: formData.placeOfBirth,
+        place_of_birth: sanitizeInput(formData.placeOfBirth),
         civil_status: formData.civilStatus,
-        occupation: formData.occupation || null,
+        occupation: sanitizeInput(formData.occupation) || null,
         document_type: selectedDoc?.label || formData.documentType,
         purpose: formData.purpose,
         valid_id_type: formData.validId,
-        ctc_number: formData.ctcNumber || null,
+        ctc_number: sanitizeInput(formData.ctcNumber) || null,
         status: 'pending',
         date_requested: new Date().toISOString(),
         estimated_release: estimatedRelease.toISOString(),
@@ -193,7 +245,7 @@ const NewRequestPage = () => {
 
       console.log('Submitting request:', requestData);
 
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('document_requests')
         .insert([requestData])
         .select();
