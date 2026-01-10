@@ -1,5 +1,19 @@
-import React, { useState } from 'react';
-import { FileText, Phone, Mail, MapPin, Calendar, AlertCircle, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Phone, Mail, MapPin, Calendar, AlertCircle, Send, CheckCircle, Loader } from 'lucide-react';
+
+// Initialize Supabase client
+const SUPABASE_URL = 'https://ubektynslrflctveqiut.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViZWt0eW5zbHJmbGN0dmVxaXV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MzIyNDEsImV4cCI6MjA3NzEwODI0MX0.VMPxOfxSICFJLqcxBbTHFhCr4TyxIbDrBih6GuvdRrM';
+
+let supabase = null;
+
+const initSupabase = async () => {
+  if (!supabase) {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  return supabase;
+};
 
 const NewRequestPage = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +32,14 @@ const NewRequestPage = () => {
     civilStatus: '',
     occupation: ''
   });
+
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [requestId, setRequestId] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   const documentTypes = [
     { value: 'barangay-clearance', label: 'Barangay Clearance', fee: '₱50.00' },
@@ -59,19 +81,243 @@ const NewRequestPage = () => {
     'Other'
   ];
 
+  // --- GET LOGGED-IN USER ---
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const client = await initSupabase();
+        const { data: { user: currentUser }, error } = await client.auth.getUser();
+
+        if (error) {
+          console.error('Auth error:', error);
+          setSubmitError('Authentication error. Please log in again.');
+          setLoadingUser(false);
+          return;
+        }
+
+        if (!currentUser) {
+          setSubmitError('You must be logged in to submit a request.');
+          setLoadingUser(false);
+          return;
+        }
+
+        setUser(currentUser);
+        
+        // Pre-fill email if available
+        if (currentUser.email) {
+          setFormData(prev => ({ ...prev, email: currentUser.email }));
+        }
+        
+        setLoadingUser(false);
+      } catch (err) {
+        console.error('Error fetching user:', err);
+        setSubmitError('Failed to verify authentication.');
+        setLoadingUser(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const generateRequestId = () => {
+    const year = new Date().getFullYear();
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `REQ-${year}-${random}`;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setSubmitError(null);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    alert('Request submitted successfully! You will receive a confirmation via SMS and email.');
+  const validateForm = () => {
+    const required = ['firstName', 'lastName', 'address', 'contact', 'email', 'birthdate', 'placeOfBirth', 'civilStatus', 'documentType', 'purpose', 'validId'];
+    for (const field of required) {
+      if (!formData[field]) {
+        setSubmitError(`Please fill in all required fields (${field})`);
+        return false;
+      }
+    }
+    if (!termsAccepted) {
+      setSubmitError('Please accept the terms and conditions');
+      return false;
+    }
+    return true;
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    if (!user || !user.id) {
+      setSubmitError('You must be logged in to submit a request. Please refresh the page and try again.');
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const client = await initSupabase();
+      const newRequestId = generateRequestId();
+      const selectedDoc = documentTypes.find(doc => doc.value === formData.documentType);
+
+      const estimatedRelease = new Date();
+      estimatedRelease.setDate(estimatedRelease.getDate() + 5);
+
+      const requestData = {
+        request_id: newRequestId,
+        user_id: user.id,
+        first_name: formData.firstName,
+        middle_name: formData.middleName || null,
+        last_name: formData.lastName,
+        address: formData.address,
+        contact_number: formData.contact,
+        email: formData.email,
+        birthdate: formData.birthdate,
+        place_of_birth: formData.placeOfBirth,
+        civil_status: formData.civilStatus,
+        occupation: formData.occupation || null,
+        document_type: selectedDoc?.label || formData.documentType,
+        purpose: formData.purpose,
+        valid_id_type: formData.validId,
+        ctc_number: formData.ctcNumber || null,
+        status: 'pending',
+        date_requested: new Date().toISOString(),
+        estimated_release: estimatedRelease.toISOString(),
+        claim_date: null,
+        rejection_reason: null
+      };
+
+      console.log('Submitting request:', requestData);
+
+      const { data, error } = await client
+        .from('document_requests')
+        .insert([requestData])
+        .select();
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      console.log('Request submitted successfully:', data);
+
+      setRequestId(newRequestId);
+      setSubmitSuccess(true);
+
+      // Reset form
+      setFormData({
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        address: '',
+        contact: '',
+        email: user.email || '',
+        documentType: '',
+        purpose: '',
+        validId: '',
+        ctcNumber: '',
+        birthdate: '',
+        placeOfBirth: '',
+        civilStatus: '',
+        occupation: ''
+      });
+      setTermsAccepted(false);
+
+    } catch (err) {
+      console.error('Error submitting request:', err);
+      setSubmitError(err.message || 'Failed to submit request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Loading state while checking authentication
+  if (loadingUser) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not logged in state
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <div className="flex items-center gap-3 mb-2">
+            <AlertCircle className="w-6 h-6 text-red-600" />
+            <h3 className="font-semibold text-red-800">Authentication Required</h3>
+          </div>
+          <p className="text-sm text-red-700">
+            You must be logged in to submit a document request. Please log in and try again.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitSuccess) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] p-4">
+        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-12 h-12 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Request Submitted Successfully!</h2>
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-gray-600 mb-2">Your Request ID:</p>
+            <p className="text-2xl font-mono font-bold text-blue-600">{requestId}</p>
+          </div>
+          <div className="text-left bg-gray-50 rounded-lg p-4 mb-6">
+            <p className="text-sm text-gray-700 mb-2">
+              ✓ Confirmation sent via email and SMS
+            </p>
+            <p className="text-sm text-gray-700">
+              ✓ Processing time: 3-5 business days
+            </p>
+          </div>
+          <p className="text-sm text-gray-600 mb-6">
+            Please save your Request ID for tracking. You can check the status of your request in the "My Requests" section.
+          </p>
+          <button
+            onClick={() => setSubmitSuccess(false)}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all"
+          >
+            Submit Another Request
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* Information Banner */}
+      {submitError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-800">Error</p>
+              <p className="text-sm text-red-700">{submitError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
@@ -88,7 +334,6 @@ const NewRequestPage = () => {
         </div>
       </div>
 
-      {/* Document Type Selection */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Select Document Type</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -118,7 +363,6 @@ const NewRequestPage = () => {
         </div>
       </div>
 
-      {/* Request Form */}
       {formData.documentType && (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Personal Information</h2>
@@ -188,7 +432,7 @@ const NewRequestPage = () => {
                 name="placeOfBirth"
                 value={formData.placeOfBirth}
                 onChange={handleInputChange}
-                placeholder="e.g., Quezon City, Metro Manila"
+                placeholder="e.g., Roxas, Isabela"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -238,7 +482,7 @@ const NewRequestPage = () => {
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              placeholder="House/Block/Lot No., Street, Barangay"
+              placeholder="House/Block/Lot No., Street, Barangay Kurong Kurong"
               rows="2"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
@@ -326,7 +570,7 @@ const NewRequestPage = () => {
               name="ctcNumber"
               value={formData.ctcNumber}
               onChange={handleInputChange}
-              placeholder="CTC-2024-XXXXX"
+              placeholder="CTC-2025-XXXXX"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <p className="text-xs text-gray-500 mt-1">If not available, you can provide this when claiming</p>
@@ -334,7 +578,14 @@ const NewRequestPage = () => {
 
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <div className="flex items-start gap-2">
-              <input type="checkbox" id="terms" className="mt-1" required />
+              <input 
+                type="checkbox" 
+                id="terms" 
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-1" 
+                required
+              />
               <label htmlFor="terms" className="text-sm text-gray-700">
                 I hereby certify that the information provided above is true and correct to the best of my knowledge. I understand that any false information may result in the rejection of my request.
               </label>
@@ -343,10 +594,20 @@ const NewRequestPage = () => {
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            disabled={submitting}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Send className="w-5 h-5" />
-            Submit Request
+            {submitting ? (
+              <>
+                <Loader className="w-5 h-5 animate-spin" />
+                Submitting Request...
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                Submit Request
+              </>
+            )}
           </button>
         </form>
       )}
