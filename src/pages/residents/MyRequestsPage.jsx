@@ -42,7 +42,7 @@ const RequestDetailsModal = ({ isOpen, onClose, request }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+        <div className="bg-linear-to-r from-blue-600 to-blue-700 p-6 text-white">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-2 transition-colors"

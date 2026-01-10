@@ -361,7 +361,7 @@ const NewRequestPage = () => {
       {submitError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
             <div>
               <p className="text-sm font-semibold text-red-800">Error</p>
               <p className="text-sm text-red-700">{submitError}</p>
@@ -372,7 +372,7 @@ const NewRequestPage = () => {
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+          <AlertCircle className="w-6 h-6 text-blue-600 shrink-0 mt-1" />
           <div>
             <h3 className="font-semibold text-blue-900 mb-2">Requirements for Document Request</h3>
             <ul className="text-sm text-blue-800 space-y-1">
@@ -647,7 +647,7 @@ const NewRequestPage = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? (
               <>
