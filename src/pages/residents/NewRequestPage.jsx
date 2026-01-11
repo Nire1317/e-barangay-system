@@ -116,12 +116,6 @@ const NewRequestPage = () => {
     fetchUser();
   }, [authUser]);
 
-  const generateRequestId = () => {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `REQ-${timestamp}-${random}`;
-  };
-
   // Validation helpers
   const validatePhoneNumber = (phone) => {
     // Philippine mobile format: 09XX-XXX-XXXX or 09XXXXXXXXX
@@ -205,59 +199,119 @@ const NewRequestPage = () => {
     setSubmitError(null);
 
     try {
+      // Check if user has a barangay (approved barangay request)
+      if (!authUser?.barangayId) {
+        setSubmitError('You must join a barangay first before submitting document requests.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Get or create resident record
+      let residentId = null;
+      const { data: residentData, error: residentError } = await supabase
+        .from('residents')
+        .select('resident_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (residentError && residentError.code === 'PGRST116') {
+        // Resident record doesn't exist, create one with the form data
+        const { data: newResident, error: insertError } = await supabase
+          .from('residents')
+          .insert([{
+            user_id: user.id,
+            barangay_id: authUser.barangayId,
+            address: sanitizeInput(formData.address),
+            birthdate: formData.birthdate,
+            contact_number: formData.contact.replace(/[-\s]/g, ''),
+            gender: null, // Can be added to form later
+            civil_status: formData.civilStatus.charAt(0).toUpperCase() + formData.civilStatus.slice(1),
+            occupation: sanitizeInput(formData.occupation) || null,
+          }])
+          .select('resident_id')
+          .single();
+
+        if (insertError) {
+          console.error('Error creating resident record:', insertError);
+          throw insertError;
+        }
+
+        residentId = newResident.resident_id;
+      } else if (residentError) {
+        throw residentError;
+      } else {
+        residentId = residentData.resident_id;
+
+        // Update existing resident record with latest information
+        const { error: updateError } = await supabase
+          .from('residents')
+          .update({
+            address: sanitizeInput(formData.address),
+            birthdate: formData.birthdate,
+            contact_number: formData.contact.replace(/[-\s]/g, ''),
+            civil_status: formData.civilStatus.charAt(0).toUpperCase() + formData.civilStatus.slice(1),
+            occupation: sanitizeInput(formData.occupation) || null,
+          })
+          .eq('resident_id', residentId);
+
+        if (updateError) {
+          console.error('Error updating resident record:', updateError);
+          // Don't throw - continue with request submission
+        }
+      }
+
+      // Get the type_id for the selected document type
+      const selectedDoc = documentTypes.find(doc => doc.value === formData.documentType);
+      const { data: typeData, error: typeError } = await supabase
+        .from('request_types')
+        .select('type_id')
+        .eq('type_name', selectedDoc?.label)
+        .single();
+
+      if (typeError) {
+        console.error('Error fetching request type:', typeError);
+        setSubmitError(`Document type "${selectedDoc?.label}" is not available. Please contact the barangay office.`);
+        setSubmitting(false);
+        return;
+      }
+
       // Check for duplicate pending requests
       const { data: existingRequests, error: checkError } = await supabase
-        .from('document_requests')
-        .select('request_id, document_type')
-        .eq('user_id', user.id)
-        .eq('status', 'pending')
-        .eq('document_type', documentTypes.find(doc => doc.value === formData.documentType)?.label);
+        .from('requests')
+        .select('request_id')
+        .eq('resident_id', residentId)
+        .eq('status', 'Pending')
+        .eq('type_id', typeData.type_id);
 
       if (checkError) {
         console.error('Error checking for duplicates:', checkError);
       }
 
       if (existingRequests && existingRequests.length > 0) {
-        setSubmitError(`You already have a pending request for this document type (Request ID: ${existingRequests[0].request_id}). Please wait for it to be processed.`);
+        setSubmitError(`You already have a pending request for this document type. Please wait for it to be processed.`);
         setSubmitting(false);
         return;
       }
 
-      const newRequestId = generateRequestId();
-      const selectedDoc = documentTypes.find(doc => doc.value === formData.documentType);
-
       const estimatedRelease = new Date();
       estimatedRelease.setDate(estimatedRelease.getDate() + 5);
 
-      // Sanitize all text inputs to prevent XSS
+      // Prepare request data matching the requests table schema
       const requestData = {
-        request_id: newRequestId,
-        user_id: user.id,
-        first_name: sanitizeInput(formData.firstName),
-        middle_name: sanitizeInput(formData.middleName) || null,
-        last_name: sanitizeInput(formData.lastName),
-        address: sanitizeInput(formData.address),
-        contact_number: formData.contact.replace(/[-\s]/g, ''), // Store clean phone number
-        email: formData.email.toLowerCase().trim(),
-        birthdate: formData.birthdate,
-        place_of_birth: sanitizeInput(formData.placeOfBirth),
-        civil_status: formData.civilStatus,
-        occupation: sanitizeInput(formData.occupation) || null,
-        document_type: selectedDoc?.label || formData.documentType,
+        resident_id: residentId,
+        type_id: typeData.type_id,
         purpose: formData.purpose,
+        status: 'Pending',
+        submitted_at: new Date().toISOString(),
+        estimated_release: estimatedRelease.toISOString().split('T')[0], // date only
         valid_id_type: formData.validId,
         ctc_number: sanitizeInput(formData.ctcNumber) || null,
-        status: 'pending',
-        date_requested: new Date().toISOString(),
-        estimated_release: estimatedRelease.toISOString(),
-        claim_date: null,
-        rejection_reason: null
       };
 
       console.log('Submitting request:', requestData);
 
       const { data, error } = await supabase
-        .from('document_requests')
+        .from('requests')
         .insert([requestData])
         .select();
 
@@ -268,7 +322,8 @@ const NewRequestPage = () => {
 
       console.log('Request submitted successfully:', data);
 
-      setRequestId(newRequestId);
+      // Store the returned request_id from the database
+      setRequestId(data && data.length > 0 ? data[0].request_id : 'N/A');
       setSubmitSuccess(true);
 
       // Reset form

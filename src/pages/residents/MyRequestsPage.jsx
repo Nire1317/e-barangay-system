@@ -121,7 +121,7 @@ const RequestDetailsModal = ({ isOpen, onClose, request }) => {
                     Date Requested
                   </p>
                   <p className="text-gray-900 font-semibold">
-                    {new Date(request.date_requested).toLocaleDateString()}
+                    {new Date(request.submitted_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -182,7 +182,7 @@ const BarangayRequestDetailsModal = ({ isOpen, onClose, request, onCancel }) => 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+        <div className="bg-linear-to-r from-blue-600 to-blue-700 p-6 text-white">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-2 transition-colors"
@@ -367,15 +367,48 @@ const MyRequestsPage = () => {
       setLoading(true);
       setError(null);
 
+      // First, get the resident_id for this user
+      const { data: residentData, error: residentError } = await supabase
+        .from('residents')
+        .select('resident_id')
+        .eq('user_id', uid)
+        .single();
+
+      if (residentError) {
+        // If no resident record exists, just set empty array
+        if (residentError.code === 'PGRST116') {
+          setMyRequests([]);
+          return;
+        }
+        throw residentError;
+      }
+
+      if (!residentData) {
+        setMyRequests([]);
+        return;
+      }
+
+      // Then, get the requests for this resident with type information
       const { data, error } = await supabase
-        .from("document_requests")
-        .select("*")
-        .eq("user_id", uid)
-        .order("date_requested", { ascending: false });
+        .from("requests")
+        .select(`
+          *,
+          request_types!inner (
+            type_name
+          )
+        `)
+        .eq("resident_id", residentData.resident_id)
+        .order("submitted_at", { ascending: false });
 
       if (error) throw error;
 
-      setMyRequests(data || []);
+      // Transform data to include document_type for backward compatibility
+      const transformedData = (data || []).map(request => ({
+        ...request,
+        document_type: request.request_types?.type_name || 'Unknown',
+      }));
+
+      setMyRequests(transformedData);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -419,24 +452,32 @@ const MyRequestsPage = () => {
 
   // --- STATUS BADGES ---
   const getStatusColor = (status) => {
-    switch (status) {
+    const statusLower = status?.toLowerCase();
+    switch (statusLower) {
       case "pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-300";
       case "approved":
+        return "bg-blue-100 text-blue-800 border-blue-300";
+      case "completed":
         return "bg-green-100 text-green-800 border-green-300";
+      case "denied":
       case "rejected":
         return "bg-red-100 text-red-800 border-red-300";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
 
   const getStatusIcon = (status) => {
-    switch (status) {
+    const statusLower = status?.toLowerCase();
+    switch (statusLower) {
       case "pending":
         return <Clock className="w-4 h-4" />;
       case "approved":
         return <CheckCircle className="w-4 h-4" />;
+      case "completed":
+        return <CheckCircle className="w-4 h-4" />;
+      case "denied":
       case "rejected":
         return <XCircle className="w-4 h-4" />;
       default:
@@ -592,48 +633,113 @@ const MyRequestsPage = () => {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {myRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="p-6 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="font-mono font-bold text-gray-900">
-                          {request.request_id}
-                        </span>
-                        <span
-                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(
-                            request.status
-                          )}`}
-                        >
-                          {getStatusIcon(request.status)}
-                          {request.status.toUpperCase()}
-                        </span>
+              {myRequests.map((request) => {
+                const isCompleted = request.status?.toLowerCase() === 'completed';
+                const isApproved = request.status?.toLowerCase() === 'approved';
+
+                return (
+                  <div
+                    key={request.request_id}
+                    className={`p-6 transition-colors ${
+                      isCompleted
+                        ? 'bg-green-50 hover:bg-green-100 border-l-4 border-green-500'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="font-mono text-sm font-bold text-gray-900">
+                            {request.request_id}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(
+                              request.status
+                            )}`}
+                          >
+                            {getStatusIcon(request.status)}
+                            {request.status?.toUpperCase()}
+                          </span>
+                        </div>
+
+                        <h3 className="font-semibold text-lg text-gray-800 mb-1">
+                          {request.document_type}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          <span className="font-medium">Purpose:</span> {request.purpose}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                          <span className="font-medium">Requested on:</span>{" "}
+                          {new Date(request.submitted_at).toLocaleDateString()}
+                        </p>
+
+                        {/* Ready for Pickup Alert */}
+                        {isCompleted && (
+                          <div className="mt-3 flex items-start gap-2 p-3 bg-green-100 border border-green-300 rounded-lg">
+                            <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-bold text-green-900">
+                                Ready for Pickup!
+                              </p>
+                              <p className="text-xs text-green-800 mt-1">
+                                Your document is ready. Please bring a valid ID when claiming.
+                              </p>
+                              {request.estimated_release && (
+                                <p className="text-xs text-green-700 mt-1">
+                                  <span className="font-semibold">Claim by:</span>{" "}
+                                  {new Date(request.estimated_release).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Processing Alert */}
+                        {isApproved && (
+                          <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-blue-900">
+                                Being Processed
+                              </p>
+                              <p className="text-xs text-blue-800 mt-1">
+                                Your request has been approved and is currently being processed.
+                              </p>
+                              {request.estimated_release && (
+                                <p className="text-xs text-blue-700 mt-1">
+                                  <span className="font-semibold">Estimated release:</span>{" "}
+                                  {new Date(request.estimated_release).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Remarks */}
+                        {request.remarks && (
+                          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <p className="text-xs font-semibold text-gray-700 mb-1">
+                              Remarks:
+                            </p>
+                            <p className="text-sm text-gray-600">{request.remarks}</p>
+                          </div>
+                        )}
                       </div>
 
-                      <h3 className="font-semibold text-lg text-gray-800 mb-1">
-                        {request.document_type}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Purpose: {request.purpose}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-2">
-                        Requested on:{" "}
-                        {new Date(request.date_requested).toLocaleDateString()}
-                      </p>
+                      <button
+                        onClick={() => openModal(request)}
+                        className={`text-sm font-semibold hover:underline whitespace-nowrap px-4 py-2 rounded-lg transition-colors ${
+                          isCompleted
+                            ? 'text-green-700 hover:text-green-900 bg-green-100 hover:bg-green-200'
+                            : 'text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100'
+                        }`}
+                      >
+                        View Details →
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => openModal(request)}
-                      className="text-blue-600 hover:text-blue-800 font-semibold text-sm hover:underline whitespace-nowrap"
-                    >
-                      View Details →
-                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

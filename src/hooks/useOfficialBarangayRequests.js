@@ -131,11 +131,12 @@ export const useOfficialBarangayRequests = () => {
 
       if (updateError) throw updateError;
 
-      // Update user's barangay_id
+      // Update user's barangay_id and mark as verified
       const { error: userUpdateError } = await supabase
         .from('users')
         .update({
           barangay_id: request.barangay_id,
+          is_verified: true,
         })
         .eq('user_id', request.user_id);
 

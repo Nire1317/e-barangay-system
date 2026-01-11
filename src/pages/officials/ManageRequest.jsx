@@ -300,7 +300,7 @@ const RequestsTable = ({
 };
 
 // Request details modal component
-const RequestDetailsModal = ({ request, onClose, onApprove, onDeny }) => {
+const RequestDetailsModal = ({ request, onClose, onApprove, onDeny, onComplete }) => {
   if (!request) return null;
 
   const StatusIcon = getStatusIcon(request.status);
@@ -437,6 +437,53 @@ const RequestDetailsModal = ({ request, onClose, onApprove, onDeny }) => {
             </button>
           </div>
         )}
+
+        {request.status === "Approved" && (
+          <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => {
+                onComplete(request.request_id);
+                onClose();
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+              <CheckIcon className="w-4 h-4" />
+              Mark as Completed
+            </button>
+          </div>
+        )}
+
+        {request.status === "Completed" && (
+          <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircleIcon className="w-5 h-5" />
+              <span className="text-sm font-medium">Document ready for pickup</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
+        {request.status === "Denied" && (
+          <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -446,7 +493,7 @@ const RequestDetailsModal = ({ request, onClose, onApprove, onDeny }) => {
 function ManageRequests() {
   const { user } = useAuth();
   const { roleName } = usePermissions();
-  const { requests, isLoading, approveRequest, denyRequest, getStats } =
+  const { requests, isLoading, approveRequest, denyRequest, updateRequestStatus, getStats } =
     useRequests();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -475,6 +522,18 @@ function ManageRequests() {
       }
     },
     [denyRequest]
+  );
+
+  const handleComplete = useCallback(
+    async (requestId) => {
+      const result = await updateRequestStatus(requestId, "Completed", "Document completed and ready for pickup");
+      if (result.success) {
+        console.log("Request marked as completed successfully");
+      } else {
+        console.error("Failed to mark request as completed:", result.error);
+      }
+    },
+    [updateRequestStatus]
   );
 
   const handleViewDetails = useCallback((request) => {
@@ -574,6 +633,7 @@ function ManageRequests() {
             onClose={() => setSelectedRequest(null)}
             onApprove={handleApprove}
             onDeny={handleDeny}
+            onComplete={handleComplete}
           />
         )}
       </div>

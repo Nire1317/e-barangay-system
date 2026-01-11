@@ -65,17 +65,49 @@ const Dashboard = () => {
   const fetchUserStats = async (userId) => {
     try {
       const client = await initSupabase();
+
+      // First, get the resident_id for this user
+      const { data: residentData, error: residentError } = await client
+        .from('residents')
+        .select('resident_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (residentError) {
+        // If no resident record exists, set stats to 0
+        if (residentError.code === 'PGRST116') {
+          setUserStats({
+            totalRequests: 0,
+            pendingRequests: 0,
+            approvedRequests: 0
+          });
+          return;
+        }
+        throw residentError;
+      }
+
+      if (!residentData) {
+        console.log('No resident record found for user');
+        setUserStats({
+          totalRequests: 0,
+          pendingRequests: 0,
+          approvedRequests: 0
+        });
+        return;
+      }
+
+      // Then, get the requests for this resident
       const { data, error } = await client
-        .from('document_requests')
+        .from('requests')
         .select('status')
-        .eq('user_id', userId);
+        .eq('resident_id', residentData.resident_id);
 
       if (error) throw error;
 
       const stats = {
-        totalRequests: data.length,
-        pendingRequests: data.filter(req => req.status === 'pending').length,
-        approvedRequests: data.filter(req => req.status === 'approved').length
+        totalRequests: data?.length || 0,
+        pendingRequests: data?.filter(req => req.status === 'Pending').length || 0,
+        approvedRequests: data?.filter(req => req.status === 'Approved').length || 0
       };
 
       setUserStats(stats);
@@ -104,7 +136,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 text-lg">Loading dashboard...</p>
@@ -114,9 +146,9 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl">
+      <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             
@@ -156,7 +188,7 @@ const Dashboard = () => {
 
                 {userDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl overflow-hidden z-50">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white">
+                    <div className="bg-linear-to-r from-blue-600 to-indigo-600 p-4 text-white">
                       <p className="font-semibold">{user?.email}</p>
                       <p className="text-xs text-blue-100 mt-1">User ID: {user?.id?.slice(0, 8)}...</p>
                     </div>

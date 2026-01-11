@@ -18,18 +18,14 @@ import {
 } from "../../components/ui/icons";
 import { MapPin } from "lucide-react";
 import AppSideBar from "../../components/ui/side-bar";
+import {
+  getDashboardStats,
+  getWeeklyRequestsData,
+  getRecentActivities,
+  getStatsTrends,
+} from "../../services/dashboardService";
 
 // Constants
-const CHART_DATA = [
-  { name: "Mon", requests: 45 },
-  { name: "Tue", requests: 52 },
-  { name: "Wed", requests: 38 },
-  { name: "Thu", requests: 61 },
-  { name: "Fri", requests: 48 },
-  { name: "Sat", requests: 35 },
-  { name: "Sun", requests: 42 },
-];
-
 const QUICK_ACTIONS = [
   {
     label: "Barangay Requests",
@@ -61,39 +57,8 @@ const QUICK_ACTIONS = [
   },
 ];
 
-const ACTIVITY_DATA = [
-  {
-    id: 1,
-    action: "New resident registration",
-    time: "2 minutes ago",
-    user: "Maria Santos",
-    type: "registration",
-  },
-  {
-    id: 2,
-    action: "Document request approved",
-    time: "1 hour ago",
-    user: "Juan Dela Cruz",
-    type: "approval",
-  },
-  {
-    id: 3,
-    action: "Report generated",
-    time: "3 hours ago",
-    user: "System",
-    type: "system",
-  },
-  {
-    id: 4,
-    action: "Bulk update completed",
-    time: "5 hours ago",
-    user: "Admin",
-    type: "system",
-  },
-];
-
 // Helper functions
-const getStatsConfig = (data, barangayStats) => [
+const getStatsConfig = (data, barangayStats, trends) => [
   {
     title: "Pending Barangay Requests",
     value: barangayStats?.pending?.toString() || "0",
@@ -104,23 +69,27 @@ const getStatsConfig = (data, barangayStats) => [
   },
   {
     title: "Pending Requests",
-    value: data?.pendingRequests || "12",
+    value: data?.pendingRequests?.toString() || "0",
     icon: FileTextIcon,
     color: "text-blue-600",
     bgColor: "bg-blue-50",
-    trend: "+3 from yesterday",
+    trend: trends?.pendingFromYesterday
+      ? `+${trends.pendingFromYesterday} from yesterday`
+      : "No new requests",
   },
   {
     title: "Total Residents",
-    value: data?.totalResidents || "456",
+    value: data?.totalResidents?.toString() || "0",
     icon: UsersIcon,
     color: "text-green-600",
     bgColor: "bg-green-50",
-    trend: "+12 this month",
+    trend: trends?.newResidentsThisMonth
+      ? `+${trends.newResidentsThisMonth} this month`
+      : "No new residents",
   },
   {
     title: "Completed Today",
-    value: data?.completedToday || "8",
+    value: data?.completedToday?.toString() || "0",
     icon: CheckCircleIcon,
     color: "text-purple-600",
     bgColor: "bg-purple-50",
@@ -190,7 +159,7 @@ const PermissionNotice = () => (
 );
 
 // Dashboard content component
-const DashboardContent = ({ stats, isLoading }) => {
+const DashboardContent = ({ stats, chartData, activities, isLoading }) => {
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -200,12 +169,12 @@ const DashboardContent = ({ stats, isLoading }) => {
       <StatsGrid stats={stats} className="mb-6" />
       <RequestsChart
         className="mb-6"
-        data={CHART_DATA}
+        data={chartData}
         title="Weekly Requests Overview"
       />
       <QuickActions actions={QUICK_ACTIONS} className="mb-6" />
       <RecentActivity
-        activities={ACTIVITY_DATA}
+        activities={activities}
         title="Recent Activity"
         viewAllLink="/activity"
       />
@@ -218,6 +187,9 @@ function AdminDashboard() {
   const { roleName } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
+  const [chartData, setChartData] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [trends, setTrends] = useState(null);
 
   // Use barangay requests hook
   const { stats: barangayStats, fetchRequestStats } = useOfficialBarangayRequests();
@@ -225,31 +197,48 @@ function AdminDashboard() {
   const fetchDashboardData = useCallback(async () => {
     try {
       setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      setDashboardData({
-        pendingRequests: "12",
-        totalResidents: "456",
-        completedToday: "8",
-        activityLogs: "24",
-      });
-
-      // Fetch barangay request stats
       if (user?.barangayId) {
+        // Fetch all dashboard data in parallel
+        const [stats, weeklyData, recentActivities, statsTrends] = await Promise.all([
+          getDashboardStats(user.barangayId),
+          getWeeklyRequestsData(),
+          getRecentActivities(10),
+          getStatsTrends(user.barangayId),
+        ]);
+
+        // Fetch barangay stats separately (this updates the hook's internal state)
         await fetchRequestStats();
+
+        setDashboardData(stats);
+        setChartData(weeklyData);
+        setActivities(recentActivities);
+        setTrends(statsTrends);
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
+      // Set empty data on error to prevent crashes
+      setDashboardData({
+        pendingRequests: 0,
+        totalResidents: 0,
+        completedToday: 0,
+        activityLogs: 0,
+      });
+      setChartData([]);
+      setActivities([]);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.barangayId, fetchRequestStats]);
+  }, [user?.barangayId]);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const stats = useMemo(() => getStatsConfig(dashboardData, barangayStats), [dashboardData, barangayStats]);
+  const stats = useMemo(
+    () => getStatsConfig(dashboardData, barangayStats, trends),
+    [dashboardData, barangayStats, trends]
+  );
 
   return (
     <AppSideBar>
@@ -261,7 +250,12 @@ function AdminDashboard() {
           <PermissionNotice />
 
           <OfficialOnly>
-            <DashboardContent stats={stats} isLoading={isLoading} />
+            <DashboardContent
+              stats={stats}
+              chartData={chartData}
+              activities={activities}
+              isLoading={isLoading}
+            />
           </OfficialOnly>
         </main>
       </div>
