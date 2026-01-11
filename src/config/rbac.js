@@ -75,6 +75,7 @@ export const ROUTE_ACCESS = {
   "/requests/new": [ROLES.RESIDENT, ROLES.OFFICIAL],
   "/join-barangay": [ROLES.RESIDENT],
   "/admin": [ROLES.OFFICIAL],
+  "/barangay-requests": [ROLES.OFFICIAL],
   "/admin/requests": [ROLES.OFFICIAL],
   "/admin/residents": [ROLES.OFFICIAL],
   "/admin/reports": [ROLES.OFFICIAL],

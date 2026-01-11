@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePermissions } from "../../hooks/usePermissions";
 import { OfficialOnly } from "../../components/PermissionGate";
+import { useOfficialBarangayRequests } from "../../hooks/useOfficialBarangayRequests";
 import StatsGrid from "../../components/admin-dashboard/StatsGrid";
 import QuickActions from "../../components/admin-dashboard/QuickActions";
 import RequestsChart from "../../components/admin-dashboard/RequestsChart";
@@ -15,6 +16,7 @@ import {
   UserCogIcon,
   BarChartIcon,
 } from "../../components/ui/icons";
+import { MapPin } from "lucide-react";
 import AppSideBar from "../../components/ui/side-bar";
 
 // Constants
@@ -29,6 +31,13 @@ const CHART_DATA = [
 ];
 
 const QUICK_ACTIONS = [
+  {
+    label: "Barangay Requests",
+    icon: MapPin,
+    path: "/barangay-requests",
+    variant: "primary",
+    description: "Review membership requests",
+  },
   {
     label: "View All Requests",
     icon: ClipboardIcon,
@@ -84,7 +93,15 @@ const ACTIVITY_DATA = [
 ];
 
 // Helper functions
-const getStatsConfig = (data) => [
+const getStatsConfig = (data, barangayStats) => [
+  {
+    title: "Pending Barangay Requests",
+    value: barangayStats?.pending?.toString() || "0",
+    icon: MapPin,
+    color: "text-amber-600",
+    bgColor: "bg-amber-50",
+    trend: `${barangayStats?.total || 0} total requests`,
+  },
   {
     title: "Pending Requests",
     value: data?.pendingRequests || "12",
@@ -108,14 +125,6 @@ const getStatsConfig = (data) => [
     color: "text-purple-600",
     bgColor: "bg-purple-50",
     trend: "On track",
-  },
-  {
-    title: "Activity Logs",
-    value: data?.activityLogs || "24",
-    icon: ActivityIcon,
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-    trend: "Last hour",
   },
 ];
 
@@ -210,6 +219,9 @@ function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
 
+  // Use barangay requests hook
+  const { stats: barangayStats, fetchRequestStats } = useOfficialBarangayRequests();
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -221,18 +233,23 @@ function AdminDashboard() {
         completedToday: "8",
         activityLogs: "24",
       });
+
+      // Fetch barangay request stats
+      if (user?.barangayId) {
+        await fetchRequestStats();
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.barangayId, fetchRequestStats]);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const stats = useMemo(() => getStatsConfig(dashboardData), [dashboardData]);
+  const stats = useMemo(() => getStatsConfig(dashboardData, barangayStats), [dashboardData, barangayStats]);
 
   return (
     <AppSideBar>

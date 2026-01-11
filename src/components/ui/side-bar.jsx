@@ -56,12 +56,12 @@ const OFFICIAL_MENU_ITEMS = [
     name: "Dashboard",
     icon: LayoutDashboard,
     path: "/dashboard",
-  },    
-  // {
-  //   name: "All Requests",
-  //   icon: FolderOpen,
-  //   path: "/requests",
-  // },
+  },
+  {
+    name: "Barangay Requests",
+    icon: MapPin,
+    path: "/barangay-requests",
+  },
   {
     name: "Manage Requests",
     icon: FileText,

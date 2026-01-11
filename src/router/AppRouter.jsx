@@ -16,6 +16,7 @@ import MyRequestsPage from "../pages/residents/MyRequestsPage";
 
 // Official Pages
 import AdminDashboard from "../pages/officials/AdminDashboard";
+import BarangayRequestsPage from "../pages/officials/BarangayRequestsPage";
 import ManageRequests from "../pages/officials/ManageRequest";
 import Residents from "../pages/officials/Residents";
 import ReportsAdminPage from "../pages/officials/ReportsAdminPage";
@@ -78,6 +79,14 @@ const AppRouter = () => {
             element={
               <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/barangay-requests"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+                <BarangayRequestsPage />
               </ProtectedRoute>
             }
           />
