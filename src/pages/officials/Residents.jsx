@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   UserPlus,
@@ -17,105 +17,15 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import AppSideBar from "../../components/ui/side-bar";
-
-// Mock data
-const RESIDENTS_DATA = [
-  {
-    id: 1,
-    name: "Maria Santos",
-    email: "maria.santos@email.com",
-    phone: "+63 912 345 6789",
-    address: "123 Main St, Barangay Center",
-    status: "verified",
-    registeredDate: "2025-01-15",
-    age: 34,
-    gender: "Female",
-  },
-  {
-    id: 2,
-    name: "Juan Dela Cruz",
-    email: "juan.delacruz@email.com",
-    phone: "+63 923 456 7890",
-    address: "456 Church Ave, Block 2",
-    status: "verified",
-    registeredDate: "2025-02-20",
-    age: 45,
-    gender: "Male",
-  },
-  {
-    id: 3,
-    name: "Ana Reyes",
-    email: "ana.reyes@email.com",
-    phone: "+63 934 567 8901",
-    address: "789 School Rd, Sitio 3",
-    status: "pending",
-    registeredDate: "2025-10-05",
-    age: 28,
-    gender: "Female",
-  },
-  {
-    id: 4,
-    name: "Pedro Garcia",
-    email: "pedro.garcia@email.com",
-    phone: "+63 945 678 9012",
-    address: "321 Market St, Zone 1",
-    status: "verified",
-    registeredDate: "2023-12-10",
-    age: 52,
-    gender: "Male",
-  },
-  {
-    id: 5,
-    name: "Lisa Fernandez",
-    email: "lisa.fernandez@email.com",
-    phone: "+63 956 789 0123",
-    address: "654 Park Lane, Block 4",
-    status: "inactive",
-    registeredDate: "2023-11-25",
-    age: 41,
-    gender: "Female",
-  },
-];
-
-const STATS = [
-  {
-    title: "Total Residents",
-    value: "456",
-    icon: Users,
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-    trend: "+12 this month",
-  },
-  {
-    title: "Verified",
-    value: "398",
-    icon: CheckCircle,
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    trend: "87% of total",
-  },
-  {
-    title: "Pending",
-    value: "43",
-    icon: Clock,
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-    trend: "Needs review",
-  },
-  {
-    title: "Inactive",
-    value: "15",
-    icon: XCircle,
-    color: "text-red-600",
-    bgColor: "bg-red-50",
-    trend: "3% of total",
-  },
-];
+import { useResidents } from "../../hooks/useResidents";
+import { useAuth } from "../../hooks/useAuth";
 
 // Components
-const NavigationHeader = () => (
+const NavigationHeader = ({ user }) => (
   <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10 shadow-sm">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between h-14.5 items-center">
@@ -127,10 +37,10 @@ const NavigationHeader = () => (
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-slate-900 leading-tight">
-              Admin User
+              {user?.full_name || "User"}
             </p>
             <p className="text-xs text-slate-600 font-medium leading-tight mt-0.5">
-              Administrator
+              {user?.role === "official" ? "Official" : "Administrator"}
             </p>
           </div>
         </div>
@@ -150,19 +60,18 @@ const PageHeader = () => (
   </div>
 );
 
-const StatsCard = ({ stat }) => {
-  const Icon = stat.icon;
+const StatsCard = ({ title, value, icon: Icon, color, bgColor, trend }) => {
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-slate-600 mb-1">
-            {stat.title}
+            {title}
           </p>
-          <p className="text-3xl font-bold text-slate-900 mb-2">{stat.value}</p>
-          <p className="text-xs text-slate-500 font-medium">{stat.trend}</p>
+          <p className="text-3xl font-bold text-slate-900 mb-2">{value}</p>
+          <p className="text-xs text-slate-500 font-medium">{trend}</p>
         </div>
-        <div className={`${stat.bgColor} ${stat.color} p-3 rounded-lg`}>
+        <div className={`${bgColor} ${color} p-3 rounded-lg`}>
           <Icon size={24} />
         </div>
       </div>
@@ -215,15 +124,24 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const ResidentRow = ({ resident }) => {
+const ResidentRow = ({ resident, onViewDetails, onEdit, onDelete }) => {
   const [showActions, setShowActions] = useState(false);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   return (
     <tr className="hover:bg-slate-50 transition-colors">
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
           <div className="h-10 w-10 rounded-full bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
-            {resident.name.charAt(0)}
+            {resident.name?.charAt(0) || "?"}
           </div>
           <div className="ml-4">
             <div className="text-sm font-semibold text-slate-900">
@@ -245,7 +163,7 @@ const ResidentRow = ({ resident }) => {
         <StatusBadge status={resident.status} />
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-        {resident.registeredDate}
+        {formatDate(resident.registeredDate)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
         <div className="relative">
@@ -257,15 +175,33 @@ const ResidentRow = ({ resident }) => {
           </button>
           {showActions && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
-              <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setShowActions(false);
+                  onViewDetails?.(resident);
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              >
                 <Eye size={16} />
                 View Details
               </button>
-              <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setShowActions(false);
+                  onEdit?.(resident);
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              >
                 <Edit size={16} />
                 Edit
               </button>
-              <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setShowActions(false);
+                  onDelete?.(resident);
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+              >
                 <Trash2 size={16} />
                 Delete
               </button>
@@ -278,22 +214,146 @@ const ResidentRow = ({ resident }) => {
 };
 
 export default function ResidentsPage() {
+  const { user } = useAuth();
+  const {
+    residents,
+    stats,
+    loading,
+    error,
+    fetchResidents,
+    fetchResidentStats,
+    deleteResident,
+  } = useResidents();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+
+  // Load initial data
+  useEffect(() => {
+    if (user?.barangayId) {
+      fetchResidents();
+      fetchResidentStats();
+    }
+  }, [user?.barangayId]);
+
+  // Apply filters when search or status changes
+  useEffect(() => {
+    if (user?.barangayId) {
+      fetchResidents({
+        search: searchTerm,
+        status: filterStatus,
+      });
+    }
+  }, [searchTerm, filterStatus]);
+
+  // Calculate dynamic stats
+  const totalResidents = stats.total || 0;
+  const verifiedCount = stats.verified || 0;
+  const pendingCount = stats.pending || 0;
+  const inactiveCount = stats.inactive || 0;
+  const verifiedPercentage = totalResidents > 0
+    ? Math.round((verifiedCount / totalResidents) * 100)
+    : 0;
+  const inactivePercentage = totalResidents > 0
+    ? Math.round((inactiveCount / totalResidents) * 100)
+    : 0;
+
+  // Handle actions
+  const handleViewDetails = (resident) => {
+    // TODO: Implement view details modal
+    console.log("View details:", resident);
+  };
+
+  const handleEdit = (resident) => {
+    // TODO: Implement edit modal
+    console.log("Edit resident:", resident);
+  };
+
+  const handleDelete = async (resident) => {
+    if (window.confirm(`Are you sure you want to delete ${resident.name}?`)) {
+      try {
+        await deleteResident(resident.resident_id);
+        alert("Resident deleted successfully");
+      } catch (err) {
+        alert("Failed to delete resident");
+      }
+    }
+  };
+
+  // Check if user has barangay assigned
+  if (!user?.barangayId) {
+    return (
+      <AppSideBar>
+        <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-amber-900 mb-2">
+                  No Barangay Assigned
+                </h3>
+                <p className="text-amber-800">
+                  You must be assigned to a barangay to view residents.
+                  Please contact your system administrator.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AppSideBar>
+    );
+  }
 
   return (
     <AppSideBar>
       <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100">
-        <NavigationHeader />
+        <NavigationHeader user={user} />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <PageHeader />
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {STATS.map((stat, index) => (
-              <StatsCard key={index} stat={stat} />
-            ))}
+            <StatsCard
+              title="Total Residents"
+              value={totalResidents.toString()}
+              icon={Users}
+              color="text-blue-600"
+              bgColor="bg-blue-50"
+              trend={`${totalResidents} total`}
+            />
+            <StatsCard
+              title="Verified"
+              value={verifiedCount.toString()}
+              icon={CheckCircle}
+              color="text-green-600"
+              bgColor="bg-green-50"
+              trend={`${verifiedPercentage}% of total`}
+            />
+            <StatsCard
+              title="Pending"
+              value={pendingCount.toString()}
+              icon={Clock}
+              color="text-orange-600"
+              bgColor="bg-orange-50"
+              trend={pendingCount > 0 ? "Needs review" : "All clear"}
+            />
+            <StatsCard
+              title="Inactive"
+              value={inactiveCount.toString()}
+              icon={XCircle}
+              color="text-red-600"
+              bgColor="bg-red-50"
+              trend={`${inactivePercentage}% of total`}
+            />
           </div>
 
           {/* Actions Bar */}
@@ -336,65 +396,89 @@ export default function ResidentsPage() {
             </div>
           </div>
 
-          {/* Residents Table */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                      Resident
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                      Phone
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                      Address
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                      Registered
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
-                  {RESIDENTS_DATA.map((resident) => (
-                    <ResidentRow key={resident.id} resident={resident} />
-                  ))}
-                </tbody>
-              </table>
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
             </div>
+          )}
 
-            {/* Pagination */}
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-              <div className="text-sm text-slate-600">
-                Showing <span className="font-semibold">1-5</span> of{" "}
-                <span className="font-semibold">456</span> residents
+          {/* Residents Table */}
+          {!loading && residents.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Resident
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Phone
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Address
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Registered
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                    {residents.map((resident) => (
+                      <ResidentRow
+                        key={resident.resident_id}
+                        resident={resident}
+                        onViewDetails={handleViewDetails}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex gap-2">
-                <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-                  Previous
-                </button>
-                <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors">
-                  1
-                </button>
-                <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-                  2
-                </button>
-                <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-                  3
-                </button>
-                <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-                  Next
-                </button>
+
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <div className="text-sm text-slate-600">
+                  Showing <span className="font-semibold">1-{residents.length}</span> of{" "}
+                  <span className="font-semibold">{totalResidents}</span> residents
+                </div>
+                <div className="flex gap-2">
+                  <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50" disabled>
+                    Previous
+                  </button>
+                  <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors">
+                    1
+                  </button>
+                  <button className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50" disabled>
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && residents.length === 0 && (
+            <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-slate-200">
+              <Users className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">
+                No residents found
+              </h3>
+              <p className="text-slate-600">
+                {searchTerm || filterStatus !== "all"
+                  ? "Try adjusting your search or filters."
+                  : "There are no residents in your barangay yet."}
+              </p>
+            </div>
+          )}
         </main>
       </div>
     </AppSideBar>

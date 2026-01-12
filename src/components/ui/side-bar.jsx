@@ -40,6 +40,11 @@ const BASE_MENU_ITEMS = [
     path: "/new-request",
   },
   {
+    name: "Become Official",
+    icon: Shield,
+    path: "/request-verification",
+  },
+  {
     name: "Profile",
     icon: User,
     path: "/profile",
@@ -77,11 +82,34 @@ const OFFICIAL_MENU_ITEMS = [
     icon: FileText,
     path: "/reports",
   },
-  // {
-  //   name: "Analytics",
-  //   icon: BarChart3,
-  //   path: "/analytics",
-  // },
+  {
+    name: "Settings",
+    icon: Settings,
+    path: "/settings",
+  },
+];
+
+const ADMIN_MENU_ITEMS = [
+  {
+    name: "Dashboard",
+    icon: LayoutDashboard,
+    path: "/superadmin",
+  },
+  {
+    name: "All Verifications",
+    icon: Shield,
+    path: "/super-admin-verifications",
+  },
+  {
+    name: "Official Verifications",
+    icon: Shield,
+    path: "/official-verifications",
+  },
+  {
+    name: "Reports",
+    icon: FileText,
+    path: "/reports",
+  },
   {
     name: "Admin Panel",
     icon: Shield,
@@ -304,9 +332,10 @@ export default function AppSideBar({ children }) {
     useSidebarState(isMobile);
 
   const menuItems = useMemo(() => {
+    if (isAdmin) return ADMIN_MENU_ITEMS;
     if (isOfficial) return OFFICIAL_MENU_ITEMS;
     return BASE_MENU_ITEMS;
-  }, [isOfficial]);
+  }, [isAdmin, isOfficial]);
 
   const contentMargin = useMemo(() => {
     if (isMobile) return "";

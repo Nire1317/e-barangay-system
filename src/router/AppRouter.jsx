@@ -13,15 +13,21 @@ import NotFound from "../pages/NotFound";
 import Dashboard from "../pages/residents/Dashboard";
 import JoinBarangayPage from "../pages/residents/JoinBarangayPage";
 import MyRequestsPage from "../pages/residents/MyRequestsPage";
+import RequestOfficialVerificationPage from "../pages/residents/RequestOfficialVerificationPage";
 
 // Official Pages
 import AdminDashboard from "../pages/officials/AdminDashboard";
 import BarangayRequestsPage from "../pages/officials/BarangayRequestsPage";
+import OfficialVerificationsPage from "../pages/officials/OfficialVerificationsPage";
 import ManageRequests from "../pages/officials/ManageRequest";
 import Residents from "../pages/officials/Residents";
 import ReportsAdminPage from "../pages/officials/ReportsAdminPage";
 import AdminPanelPage from "../pages/officials/AdminPanelPage";
 import Settings from "../pages/officials/SettingsAdminPage";
+
+// Super Admin Pages
+import SuperAdminDashboard from "../pages/superadmin/SuperAdminDashboard";
+import SuperAdminVerificationsPage from "../pages/superadmin/SuperAdminVerificationsPage";
 
 const AppRouter = () => {
   return (
@@ -72,6 +78,14 @@ const AppRouter = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/request-verification"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.RESIDENT]}>
+                <RequestOfficialVerificationPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Official Routes */}
           <Route
@@ -82,18 +96,44 @@ const AppRouter = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Super Admin Routes */}
+          <Route
+            path="/superadmin"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                <SuperAdminDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/barangay-requests"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}>
                 <BarangayRequestsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/official-verifications"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}>
+                <OfficialVerificationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/super-admin-verifications"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                <SuperAdminVerificationsPage />
               </ProtectedRoute>
             }
           />
           <Route
             path="/manage-requests"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}>
                 <ManageRequests />
               </ProtectedRoute>
             }
@@ -101,7 +141,7 @@ const AppRouter = () => {
           <Route
             path="/residents"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}>
                 <Residents />
               </ProtectedRoute>
             }
@@ -109,7 +149,7 @@ const AppRouter = () => {
           <Route
             path="/reports"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}>
                 <ReportsAdminPage />
               </ProtectedRoute>
             }
@@ -117,7 +157,7 @@ const AppRouter = () => {
           <Route
             path="/official-panel"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}>
                 <AdminPanelPage />
               </ProtectedRoute>
             }
@@ -125,7 +165,7 @@ const AppRouter = () => {
           <Route
             path="/settings"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL]}>
+              <ProtectedRoute allowedRoles={[ROLES.OFFICIAL, ROLES.ADMIN]}>
                 <Settings />
               </ProtectedRoute>
             }

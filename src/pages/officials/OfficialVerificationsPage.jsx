@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Users,
+  Shield,
   Search,
   Filter,
   Loader2,
@@ -11,52 +11,51 @@ import {
   XCircle,
   Eye,
   Calendar,
-} from "lucide-react";
-import { useOfficialBarangayRequests } from "../../hooks/useOfficialBarangayRequests";
-import { useAuth } from "../../hooks/useAuth";
-import RequestReviewModal from "../../components/barangay/RequestReviewModal";
-import RequestStatusBadge from "../../components/barangay/RequestStatusBadge";
-import AppSideBar from "../../components/ui/side-bar";
+} from 'lucide-react';
+import { useOfficialVerifications } from '../../hooks/useOfficialVerifications';
+import { useAuth } from '../../hooks/useAuth';
+import VerificationReviewModal from '../../components/verification/VerificationReviewModal';
+import AppSideBar from '../../components/ui/side-bar';
 
-const BarangayRequestsPage = () => {
+const OfficialVerificationsPage = () => {
   const { user } = useAuth();
   const {
-    requests,
+    verifications,
     stats,
     loading,
     error,
-    fetchBarangayRequests,
-    fetchRequestStats,
-    approveRequest,
-    rejectRequest,
-  } = useOfficialBarangayRequests();
+    fetchAllVerifications,
+    fetchVerificationStats,
+    approveVerification,
+    rejectVerification,
+  } = useOfficialVerifications();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedVerification, setSelectedVerification] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [processingRequest, setProcessingRequest] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Load initial data
   useEffect(() => {
     if (user?.barangayId) {
-      fetchBarangayRequests();
-      fetchRequestStats();
+      fetchAllVerifications();
+      fetchVerificationStats();
     }
   }, [user?.barangayId]);
 
-  // Filter requests based on search and status
-  const filteredRequests = requests.filter((request) => {
+  // Filter verifications based on search and status
+  const filteredVerifications = verifications.filter((verification) => {
     const matchesSearch =
-      searchTerm === "" ||
-      request.users?.full_name
+      searchTerm === '' ||
+      verification.users?.full_name
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      request.users?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      verification.users?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
-      statusFilter === "all" || request.status === statusFilter;
+      statusFilter === 'all' || verification.verification_status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -64,56 +63,54 @@ const BarangayRequestsPage = () => {
   // Handle status filter change
   const handleStatusFilterChange = (status) => {
     setStatusFilter(status);
-    fetchBarangayRequests({ status });
+    fetchAllVerifications({ status });
   };
 
-  // Handle view request
-  const handleViewRequest = (request) => {
-    setSelectedRequest(request);
+  // Handle view verification
+  const handleViewVerification = (verification) => {
+    setSelectedVerification(verification);
     setShowReviewModal(true);
   };
 
-  // Handle approve request
-  const handleApproveRequest = async (requestId, notes) => {
+  // Handle approve verification
+  const handleApproveVerification = async (verificationId) => {
     try {
       setProcessingRequest(true);
-      await approveRequest(requestId, user.id, notes);
+      await approveVerification(verificationId);
       setSuccessMessage(
-        "Request approved successfully! User has been added to your barangay."
+        'Verification approved successfully! User has been granted official access.'
       );
 
-      // Auto-hide success message after 5 seconds
       setTimeout(() => {
-        setSuccessMessage("");
+        setSuccessMessage('');
       }, 5000);
 
       setShowReviewModal(false);
-      setSelectedRequest(null);
+      setSelectedVerification(null);
     } catch (err) {
-      console.error("Error approving request:", err);
-      alert("Failed to approve request. Please try again.");
+      console.error('Error approving verification:', err);
+      alert('Failed to approve verification. Please try again.');
     } finally {
       setProcessingRequest(false);
     }
   };
 
-  // Handle reject request
-  const handleRejectRequest = async (requestId, reason) => {
+  // Handle reject verification
+  const handleRejectVerification = async (verificationId, reason) => {
     try {
       setProcessingRequest(true);
-      await rejectRequest(requestId, user.id, reason);
-      setSuccessMessage("Request rejected successfully.");
+      await rejectVerification(verificationId, reason);
+      setSuccessMessage('Verification rejected successfully.');
 
-      // Auto-hide success message after 5 seconds
       setTimeout(() => {
-        setSuccessMessage("");
+        setSuccessMessage('');
       }, 5000);
 
       setShowReviewModal(false);
-      setSelectedRequest(null);
+      setSelectedVerification(null);
     } catch (err) {
-      console.error("Error rejecting request:", err);
-      alert("Failed to reject request. Please try again.");
+      console.error('Error rejecting verification:', err);
+      alert('Failed to reject verification. Please try again.');
     } finally {
       setProcessingRequest(false);
     }
@@ -121,37 +118,38 @@ const BarangayRequestsPage = () => {
 
   // Format date
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
   if (!user?.barangayId) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="text-lg font-semibold text-amber-900 mb-2">
-                No Barangay Assigned
-              </h3>
-              <p className="text-amber-800">
-                You must be assigned to a barangay to view and manage barangay
-                requests. Please contact your system administrator.
-              </p>
+      <AppSideBar>
+        <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-amber-900 mb-2">
+                  No Barangay Assigned
+                </h3>
+                <p className="text-amber-800">
+                  You must be assigned to a barangay to view and manage official
+                  verifications. Please contact your system administrator.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </AppSideBar>
     );
   }
 
   return (
     <AppSideBar>
-      {" "}
       <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -161,14 +159,14 @@ const BarangayRequestsPage = () => {
             className="mb-8"
           >
             <div className="flex items-center gap-3 mb-4">
-              <Users className="w-8 h-8 text-blue-600" />
+              <Shield className="w-8 h-8 text-blue-600" />
               <h1 className="text-3xl font-bold text-gray-900">
-                Barangay Membership Requests
+                Official Verification Requests
               </h1>
             </div>
             <p className="text-gray-600">
-              Review and manage requests from residents who want to join your
-              barangay.
+              Review and manage requests from residents who want to become verified
+              officials.
             </p>
           </motion.div>
 
@@ -207,14 +205,14 @@ const BarangayRequestsPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">
-                    Total Requests
+                    Total Verifications
                   </p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
                     {stats.total}
                   </p>
                 </div>
                 <div className="p-3 bg-blue-100 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
+                  <Shield className="w-6 h-6 text-blue-600" />
                 </div>
               </div>
             </motion.div>
@@ -320,8 +318,8 @@ const BarangayRequestsPage = () => {
             </div>
           )}
 
-          {/* Requests Table */}
-          {!loading && filteredRequests.length > 0 && (
+          {/* Verifications Table */}
+          {!loading && filteredVerifications.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -346,15 +344,18 @@ const BarangayRequestsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredRequests.map((request) => (
-                      <tr key={request.request_id} className="hover:bg-gray-50">
+                    {filteredVerifications.map((verification) => (
+                      <tr
+                        key={verification.verification_id}
+                        className="hover:bg-gray-50"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
                             <p className="text-sm font-medium text-gray-900">
-                              {request.users?.full_name}
+                              {verification.users?.full_name}
                             </p>
                             <p className="text-sm text-gray-500">
-                              {request.users?.email}
+                              {verification.users?.email}
                             </p>
                           </div>
                         </td>
@@ -362,17 +363,27 @@ const BarangayRequestsPage = () => {
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-gray-400" />
                             <span className="text-sm text-gray-900">
-                              {formatDate(request.requested_at)}
+                              {formatDate(verification.requested_at)}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <RequestStatusBadge status={request.status} />
+                          <span
+                            className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                              verification.verification_status === 'Pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : verification.verification_status === 'Approved'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {verification.verification_status}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {request.status === "Pending" ? (
+                          {verification.verification_status === 'Pending' ? (
                             <button
-                              onClick={() => handleViewRequest(request)}
+                              onClick={() => handleViewVerification(verification)}
                               className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                             >
                               <Eye className="w-4 h-4" />
@@ -380,7 +391,7 @@ const BarangayRequestsPage = () => {
                             </button>
                           ) : (
                             <button
-                              onClick={() => handleViewRequest(request)}
+                              onClick={() => handleViewVerification(verification)}
                               className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
                             >
                               <Eye className="w-4 h-4" />
@@ -397,34 +408,34 @@ const BarangayRequestsPage = () => {
           )}
 
           {/* Empty State */}
-          {!loading && filteredRequests.length === 0 && (
+          {!loading && filteredVerifications.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-center py-12 bg-white rounded-lg shadow-md"
             >
-              <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No requests found
+                No verifications found
               </h3>
               <p className="text-gray-600">
-                {searchTerm || statusFilter !== "all"
-                  ? "Try adjusting your search or filters."
-                  : "There are no barangay membership requests at the moment."}
+                {searchTerm || statusFilter !== 'all'
+                  ? 'Try adjusting your search or filters.'
+                  : 'There are no official verification requests at the moment.'}
               </p>
             </motion.div>
           )}
 
           {/* Review Modal */}
-          <RequestReviewModal
+          <VerificationReviewModal
             isOpen={showReviewModal}
             onClose={() => {
               setShowReviewModal(false);
-              setSelectedRequest(null);
+              setSelectedVerification(null);
             }}
-            request={selectedRequest}
-            onApprove={handleApproveRequest}
-            onReject={handleRejectRequest}
+            verification={selectedVerification}
+            onApprove={handleApproveVerification}
+            onReject={handleRejectVerification}
             isLoading={processingRequest}
           />
         </div>
@@ -433,4 +444,4 @@ const BarangayRequestsPage = () => {
   );
 };
 
-export default BarangayRequestsPage;
+export default OfficialVerificationsPage;

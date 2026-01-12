@@ -75,6 +75,15 @@ export const isResident = (role) => {
 };
 
 /**
+ * Check if user is an admin
+ * @param {string} role - User's role
+ * @returns {boolean}
+ */
+export const isAdmin = (role) => {
+  return role === ROLES.ADMIN;
+};
+
+/**
  * Get all permissions for a role
  * @param {string} role - User's role
  * @returns {string[]}
@@ -92,6 +101,7 @@ export const getRoleName = (role) => {
   const roleNames = {
     [ROLES.RESIDENT]: "Resident",
     [ROLES.OFFICIAL]: "Barangay Official",
+    [ROLES.ADMIN]: "System Administrator",
   };
 
   return roleNames[role] || "Unknown";

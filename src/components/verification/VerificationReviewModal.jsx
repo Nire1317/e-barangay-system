@@ -8,22 +8,24 @@ import {
   Mail,
   Calendar,
   Loader2,
+  Shield,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 
-const RequestReviewModal = ({
+const VerificationReviewModal = ({
   isOpen,
   onClose,
-  request,
+  verification,
   onApprove,
   onReject,
   isLoading,
 }) => {
   const [action, setAction] = useState(null); // 'approve' or 'reject'
-  const [notes, setNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  if (!request) return null;
+  if (!verification) return null;
 
   const handleApprove = () => {
     setAction('approve');
@@ -41,16 +43,15 @@ const RequestReviewModal = ({
 
   const handleConfirm = async () => {
     if (action === 'approve') {
-      await onApprove(request.request_id, notes);
+      await onApprove(verification.verification_id);
     } else if (action === 'reject') {
-      await onReject(request.request_id, rejectionReason);
+      await onReject(verification.verification_id, rejectionReason);
     }
     handleClose();
   };
 
   const handleClose = () => {
     setAction(null);
-    setNotes('');
     setRejectionReason('');
     setShowConfirmation(false);
     onClose();
@@ -84,12 +85,12 @@ const RequestReviewModal = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
             >
               {/* Header */}
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">
-                  Review Barangay Request
+                  Review Official Verification
                 </h2>
                 <button
                   onClick={handleClose}
@@ -110,13 +111,13 @@ const RequestReviewModal = ({
                     )}
                     <h3 className="text-xl font-bold text-gray-900 mb-2">
                       {action === 'approve'
-                        ? 'Approve This Request?'
-                        : 'Reject This Request?'}
+                        ? 'Approve This Verification?'
+                        : 'Reject This Verification?'}
                     </h3>
                     <p className="text-gray-600">
                       {action === 'approve'
-                        ? `You are about to approve ${request.users?.full_name}'s request to join your barangay. They will be granted resident access.`
-                        : `You are about to reject ${request.users?.full_name}'s request with the following reason: "${rejectionReason}"`}
+                        ? `You are about to approve ${verification.users?.full_name}'s verification request. They will be granted official access and permissions.`
+                        : `You are about to reject ${verification.users?.full_name}'s verification request with the following reason: "${rejectionReason}"`}
                     </p>
                   </div>
 
@@ -150,7 +151,7 @@ const RequestReviewModal = ({
                 </div>
               ) : (
                 <>
-                  {/* Request Details */}
+                  {/* Verification Details */}
                   <div className="p-6 space-y-6">
                     {/* Applicant Information */}
                     <div>
@@ -159,45 +160,45 @@ const RequestReviewModal = ({
                       </h3>
                       <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                         <div className="flex items-start gap-3">
-                          <User className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                          <User className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-sm font-medium text-gray-700">
                               Full Name
                             </p>
                             <p className="text-sm text-gray-900">
-                              {request.users?.full_name}
+                              {verification.users?.full_name}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex items-start gap-3">
-                          <Mail className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                          <Mail className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-sm font-medium text-gray-700">Email</p>
                             <p className="text-sm text-gray-900">
-                              {request.users?.email}
+                              {verification.users?.email}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex items-start gap-3">
-                          <Calendar className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                          <Calendar className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-sm font-medium text-gray-700">
                               Account Created
                             </p>
                             <p className="text-sm text-gray-900">
-                              {formatDate(request.users?.created_at)}
+                              {formatDate(verification.users?.created_at)}
                             </p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Request Information */}
+                    {/* Verification Information */}
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                        Request Information
+                        Verification Information
                       </h3>
                       <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                         <div>
@@ -205,11 +206,11 @@ const RequestReviewModal = ({
                             Requested Barangay
                           </p>
                           <p className="text-sm text-gray-900">
-                            {request.barangays?.barangay_name}
+                            {verification.barangays?.barangay_name}
                           </p>
                           <p className="text-xs text-gray-600 mt-1">
-                            {request.barangays?.municipality},{' '}
-                            {request.barangays?.province}
+                            {verification.barangays?.municipality},{' '}
+                            {verification.barangays?.province}
                           </p>
                         </div>
 
@@ -218,43 +219,70 @@ const RequestReviewModal = ({
                             Requested On
                           </p>
                           <p className="text-sm text-gray-900">
-                            {formatDate(request.requested_at)}
+                            {formatDate(verification.requested_at)}
                           </p>
                         </div>
 
                         <div>
                           <p className="text-sm font-medium text-gray-700">Status</p>
-                          <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full mt-1 ${
-                            request.status === 'Pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : request.status === 'Approved'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {request.status}
+                          <span
+                            className={`inline-block px-3 py-1 text-xs font-medium rounded-full mt-1 ${
+                              verification.verification_status === 'Pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : verification.verification_status === 'Approved'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {verification.verification_status}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Approval Notes (Optional) - Only show for pending requests */}
-                    {request.status === 'Pending' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Notes (Optional)
-                        </label>
-                        <textarea
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          placeholder="Add any notes about this approval..."
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        />
-                      </div>
-                    )}
+                    {/* Proof Document */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Proof Document
+                      </h3>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                          <p className="text-sm font-medium text-gray-700">
+                            Uploaded Document
+                          </p>
+                        </div>
 
-                    {/* Rejection Reason (Required for Rejection) - Only show for pending requests */}
-                    {request.status === 'Pending' && (
+                        {verification.proof_document_url ? (
+                          <div className="space-y-3">
+                            {/* Image Preview */}
+                            {verification.proof_document_url.match(/\.(jpg|jpeg|png|gif)$/i) && (
+                              <img
+                                src={verification.proof_document_url}
+                                alt="Proof document"
+                                className="w-full max-h-96 object-contain rounded-lg bg-white border border-gray-200"
+                              />
+                            )}
+
+                            {/* View Document Button */}
+                            <a
+                              href={verification.proof_document_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              View Full Document
+                            </a>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-600">No document uploaded</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Rejection Reason (Required for Rejection) - Only show for pending */}
+                    {verification.verification_status === 'Pending' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Rejection Reason{' '}
@@ -273,50 +301,30 @@ const RequestReviewModal = ({
                       </div>
                     )}
 
-                    {/* Show review details for approved/rejected requests */}
-                    {request.status !== 'Pending' && (
+                    {/* Show review details for approved/rejected */}
+                    {verification.verification_status !== 'Pending' && (
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">
                           Review Details
                         </h3>
                         <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                          {request.reviewed_at && (
+                          {verification.reviewed_at && (
                             <div>
                               <p className="text-sm font-medium text-gray-700">
                                 Reviewed On
                               </p>
                               <p className="text-sm text-gray-900">
-                                {formatDate(request.reviewed_at)}
+                                {formatDate(verification.reviewed_at)}
                               </p>
                             </div>
                           )}
-                          {request.reviewed_by_user_id && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-700">
-                                Reviewed By
-                              </p>
-                              <p className="text-sm text-gray-900">
-                                Official ID: {request.reviewed_by_user_id}
-                              </p>
-                            </div>
-                          )}
-                          {request.notes && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-700">
-                                Notes
-                              </p>
-                              <p className="text-sm text-gray-900">
-                                {request.notes}
-                              </p>
-                            </div>
-                          )}
-                          {request.rejection_reason && (
+                          {verification.rejection_reason && (
                             <div>
                               <p className="text-sm font-medium text-gray-700">
                                 Rejection Reason
                               </p>
                               <p className="text-sm text-gray-900">
-                                {request.rejection_reason}
+                                {verification.rejection_reason}
                               </p>
                             </div>
                           )}
@@ -325,8 +333,8 @@ const RequestReviewModal = ({
                     )}
                   </div>
 
-                  {/* Actions - Only show for pending requests */}
-                  {request.status === 'Pending' && (
+                  {/* Actions - Only show for pending */}
+                  {verification.verification_status === 'Pending' && (
                     <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
                       <button
                         onClick={handleReject}
@@ -334,7 +342,7 @@ const RequestReviewModal = ({
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <XCircle className="w-5 h-5" />
-                        Reject Request
+                        Reject Verification
                       </button>
                       <button
                         onClick={handleApprove}
@@ -342,7 +350,7 @@ const RequestReviewModal = ({
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <CheckCircle className="w-5 h-5" />
-                        Approve Request
+                        Approve Verification
                       </button>
                     </div>
                   )}
@@ -356,4 +364,4 @@ const RequestReviewModal = ({
   );
 };
 
-export default RequestReviewModal;
+export default VerificationReviewModal;

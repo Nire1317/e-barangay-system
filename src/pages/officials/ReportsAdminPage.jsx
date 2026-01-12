@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   Download,
@@ -14,44 +14,15 @@ import {
   Mail,
   Eye,
   RefreshCw,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import AppSideBar from "../../components/ui/side-bar";
+import { useReports } from "../../hooks/useReports";
+import { useAuth } from "../../hooks/useAuth";
 
-// Mock data
-const REPORT_STATS = [
-  {
-    title: "Total Reports",
-    value: "48",
-    icon: FileText,
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-    trend: "+8 this month",
-  },
-  {
-    title: "Generated Today",
-    value: "5",
-    icon: TrendingUp,
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-    trend: "Active reports",
-  },
-  {
-    title: "Scheduled",
-    value: "12",
-    icon: Calendar,
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
-    trend: "Automated",
-  },
-  {
-    title: "Downloads",
-    value: "234",
-    icon: Download,
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-    trend: "This week",
-  },
-];
+// Report stats will be dynamically generated from useReports hook
 
 const REPORT_TYPES = [
   {
@@ -117,7 +88,7 @@ const REPORT_TYPES = [
 ];
 
 // Components
-const NavigationHeader = () => (
+const NavigationHeader = ({ user }) => (
   <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10 shadow-sm">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between h-14.5 items-center">
@@ -129,10 +100,10 @@ const NavigationHeader = () => (
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-slate-900 leading-tight">
-              Admin User
+              {user?.full_name || "User"}
             </p>
             <p className="text-xs text-slate-600 font-medium leading-tight mt-0.5">
-              Administrator
+              {user?.role === "official" ? "Official" : "Administrator"}
             </p>
           </div>
         </div>
@@ -253,10 +224,14 @@ const ReportCard = ({ report }) => {
   );
 };
 
-const QuickGenerateSection = () => {
+const QuickGenerateSection = ({ onGenerate, loading }) => {
   const [dateRange, setDateRange] = useState("last-30-days");
   const [reportType, setReportType] = useState("residents");
-  const [format, setFormat] = useState("pdf");
+  const [format, setFormat] = useState("csv");
+
+  const handleGenerate = () => {
+    onGenerate(reportType, dateRange, format);
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
@@ -272,11 +247,10 @@ const QuickGenerateSection = () => {
             value={reportType}
             onChange={(e) => setReportType(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            disabled={loading}
           >
             <option value="residents">Residents Summary</option>
             <option value="requests">Document Requests</option>
-            {/* <option value="analytics">Analytics Report</option>
-            <option value="financial">Financial Summary</option> */}
           </select>
         </div>
         <div>
@@ -287,13 +261,14 @@ const QuickGenerateSection = () => {
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            disabled={loading}
           >
+            <option value="all">All Time</option>
             <option value="today">Today</option>
             <option value="last-7-days">Last 7 Days</option>
             <option value="last-30-days">Last 30 Days</option>
             <option value="this-month">This Month</option>
             <option value="last-month">Last Month</option>
-            <option value="custom">Custom Range</option>
           </select>
         </div>
         <div>
@@ -304,16 +279,30 @@ const QuickGenerateSection = () => {
             value={format}
             onChange={(e) => setFormat(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            disabled={loading}
           >
-            <option value="pdf">PDF</option>
-            <option value="excel">Excel</option>
             <option value="csv">CSV</option>
+            <option value="pdf">PDF (Coming Soon)</option>
+            <option value="excel">Excel (Coming Soon)</option>
           </select>
         </div>
         <div className="flex items-end">
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-            <FileDown size={18} />
-            Generate
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileDown size={18} />
+                Generate
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -322,16 +311,164 @@ const QuickGenerateSection = () => {
 };
 
 export default function ReportsPage() {
+  const { user } = useAuth();
+  const {
+    stats,
+    loading,
+    error,
+    fetchReportStats,
+    generateResidentsReport,
+    generateRequestsReport,
+    downloadReport,
+  } = useReports();
+
   const [filterCategory, setFilterCategory] = useState("all");
+  const [generating, setGenerating] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // Load initial data
+  useEffect(() => {
+    if (user?.barangayId) {
+      fetchReportStats();
+    }
+  }, [user?.barangayId]);
+
+  // Generate report stats data
+  const REPORT_STATS = [
+    {
+      title: "Total Reports",
+      value: stats.totalReports.toString(),
+      icon: FileText,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+      trend: "Available types",
+    },
+    {
+      title: "Generated Today",
+      value: stats.generatedToday.toString(),
+      icon: TrendingUp,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+      trend: "Active reports",
+    },
+    {
+      title: "Scheduled",
+      value: stats.scheduled.toString(),
+      icon: Calendar,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+      trend: "Automated",
+    },
+    {
+      title: "Total Records",
+      value: stats.downloads.toString(),
+      icon: Download,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
+      trend: "Available data",
+    },
+  ];
+
+  // Handle report generation
+  const handleGenerateReport = async (reportType, dateRange, format) => {
+    try {
+      setGenerating(true);
+      setSuccessMessage("");
+
+      let reportData;
+      if (reportType === "residents") {
+        reportData = await generateResidentsReport(dateRange, format);
+      } else if (reportType === "requests") {
+        reportData = await generateRequestsReport(dateRange, format);
+      }
+
+      if (reportData) {
+        downloadReport(reportData);
+        setSuccessMessage(
+          `${reportType === "residents" ? "Residents Summary" : "Document Requests"} report generated successfully!`
+        );
+
+        // Refresh stats
+        await fetchReportStats();
+
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage("");
+        }, 5000);
+      }
+    } catch (err) {
+      console.error("Error generating report:", err);
+      alert(`Failed to generate report: ${err.message}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Filter reports based on category
+  const filteredReports =
+    filterCategory === "all"
+      ? REPORT_TYPES
+      : REPORT_TYPES.filter(
+          (report) => report.category.toLowerCase() === filterCategory
+        );
+
+  // Show warning if no barangay assigned
+  if (!user?.barangayId) {
+    return (
+      <AppSideBar>
+        <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-amber-900 mb-2">
+                  No Barangay Assigned
+                </h3>
+                <p className="text-amber-800">
+                  You must be assigned to a barangay to generate reports. Please
+                  contact your system administrator.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AppSideBar>
+    );
+  }
 
   return (
     <AppSideBar>
-      {" "}
       <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100">
-        <NavigationHeader />
+        <NavigationHeader user={user} />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <PageHeader />
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+              <CheckCircle2 className="text-green-600" size={20} />
+              <p className="text-sm text-green-800 font-medium">
+                {successMessage}
+              </p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <AlertCircle className="text-red-600" size={20} />
+              <p className="text-sm text-red-800 font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && !generating && (
+            <div className="mb-6 flex items-center justify-center gap-3 p-8">
+              <Loader2 className="animate-spin text-blue-600" size={24} />
+              <p className="text-slate-600">Loading report statistics...</p>
+            </div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -341,7 +478,10 @@ export default function ReportsPage() {
           </div>
 
           {/* Quick Generate Section */}
-          <QuickGenerateSection />
+          <QuickGenerateSection
+            onGenerate={handleGenerateReport}
+            loading={generating}
+          />
 
           {/* Filter Bar */}
           <div className="flex items-center justify-between mb-6">
@@ -355,21 +495,19 @@ export default function ReportsPage() {
                 <option value="all">All Categories</option>
                 <option value="demographics">Demographics</option>
                 <option value="operations">Operations</option>
-                {/* <option value="analytics">Analytics</option> */}
-                {/* <option value="finance">Finance</option> */}
                 <option value="system">System</option>
                 <option value="compliance">Compliance</option>
               </select>
             </div>
             <div className="text-sm text-slate-600">
-              <span className="font-semibold">{REPORT_TYPES.length}</span>{" "}
+              <span className="font-semibold">{filteredReports.length}</span>{" "}
               available reports
             </div>
           </div>
 
           {/* Reports Grid */}
           <div className="grid grid-cols-1 gap-6">
-            {REPORT_TYPES.map((report) => (
+            {filteredReports.map((report) => (
               <ReportCard key={report.id} report={report} />
             ))}
           </div>
@@ -380,12 +518,13 @@ export default function ReportsPage() {
               <FileText className="text-blue-600 mt-1" size={20} />
               <div>
                 <h4 className="text-sm font-semibold text-blue-900 mb-1">
-                  Automated Report Generation
+                  Report Generation
                 </h4>
                 <p className="text-sm text-blue-800 leading-relaxed">
-                  Reports are automatically generated based on their frequency
-                  settings. You can manually regenerate any report or schedule
-                  custom reports through the Quick Generate section above.
+                  Use the Quick Generate section above to create and download
+                  reports in CSV format. PDF and Excel export options are coming
+                  soon. All generated reports are automatically logged for
+                  tracking purposes.
                 </p>
               </div>
             </div>

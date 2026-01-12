@@ -8,6 +8,7 @@ import {
   canAccessRoute,
   isOfficial,
   isResident,
+  isAdmin,
   getRolePermissions,
   getRoleName,
 } from "../utils/permissions";
@@ -32,6 +33,7 @@ export const usePermissions = () => {
     // Role checks
     isOfficial: isOfficial(role),
     isResident: isResident(role),
+    isAdmin: isAdmin(role),
 
     // Role info
     role: role,

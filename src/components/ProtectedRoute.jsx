@@ -48,7 +48,12 @@ export const ProtectedRoute = ({
   // Check if user's role is allowed to access this route
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     // Redirect based on role
-    const defaultRedirect = user.role === "official" ? "/admin" : "/dashboard";
+    let defaultRedirect = "/dashboard";
+    if (user.role === "admin") {
+      defaultRedirect = "/superadmin";
+    } else if (user.role === "official") {
+      defaultRedirect = "/admin";
+    }
     return <Navigate to={defaultRedirect} replace />;
   }
 
@@ -77,7 +82,12 @@ export const PublicRoute = ({ children }) => {
 
   // If user is logged in, redirect to their dashboard
   if (user) {
-    const redirectTo = user.role === "official" ? "/admin" : "/dashboard";
+    let redirectTo = "/dashboard";
+    if (user.role === "admin") {
+      redirectTo = "/superadmin";
+    } else if (user.role === "official") {
+      redirectTo = "/admin";
+    }
     return <Navigate to={redirectTo} replace />;
   }
 
