@@ -232,7 +232,7 @@ const UsersPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* First Name */}
-          <div>
+          {/* <div>
             <p className="text-gray-600 text-sm font-semibold">First Name</p>
             {isEditing ? (
               <input
@@ -244,10 +244,10 @@ const UsersPage = () => {
             ) : (
               <p className="text-gray-800">{myAccount.firstName}</p>
             )}
-          </div>
+          </div> */}
 
           {/* Last Name */}
-          <div>
+          {/* <div>
             <p className="text-gray-600 text-sm font-semibold">Last Name</p>
             {isEditing ? (
               <input
@@ -259,7 +259,7 @@ const UsersPage = () => {
             ) : (
               <p className="text-gray-800">{myAccount.lastName}</p>
             )}
-          </div>
+          </div> */}
 
           {/* Email */}
           <div>
@@ -280,7 +280,7 @@ const UsersPage = () => {
           </div>
 
           {/* Phone */}
-          <div>
+          {/* <div>
             <p className="text-gray-600 text-sm font-semibold">Phone</p>
             {isEditing ? (
               <input
@@ -295,10 +295,10 @@ const UsersPage = () => {
                 <Phone className="w-4 h-4 text-gray-400" /> {myAccount.phone}
               </p>
             )}
-          </div>
+          </div> */}
 
           {/* Address */}
-          <div className="md:col-span-2">
+          {/* <div className="md:col-span-2">
             <p className="text-gray-600 text-sm font-semibold">Address</p>
             {isEditing ? (
               <input
@@ -313,7 +313,7 @@ const UsersPage = () => {
                 <MapPin className="w-4 h-4 text-gray-400" /> {myAccount.address}
               </p>
             )}
-          </div>
+          </div> */}
 
           {/* Date Registered */}
           <div>

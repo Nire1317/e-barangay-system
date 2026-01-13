@@ -8,10 +8,7 @@ import SettingsPage from './SettingPage';
 import UsersPage from './UserPages';
 import RequestOfficialVerificationPage from './RequestOfficialVerificationPage';
 
-
-//Note: This is just a experimental thats why the supabase init is here.
-// i dont know how to do it properly with the current project structure.
-// Please refactor this part later.
+// Note: Experimental Supabase init
 const SUPABASE_URL = 'https://ubektynslrflctveqiut.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViZWt0eW5zbHJmbGN0dmVxaXV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MzIyNDEsImV4cCI6MjA3NzEwODI0MX0.VMPxOfxSICFJLqcxBbTHFhCr4TyxIbDrBih6GuvdRrM';
 
@@ -28,6 +25,7 @@ const initSupabase = async () => {
 const Dashboard = () => {
   const [activeView, setActiveView] = useState('new-request');
   const [user, setUser] = useState(null);
+  const [barangayName, setBarangayName] = useState('');
   const [userStats, setUserStats] = useState({
     pendingRequests: 0,
     approvedRequests: 0,
@@ -52,6 +50,7 @@ const Dashboard = () => {
         if (currentUser) {
           setUser(currentUser);
           await fetchUserStats(currentUser.id);
+          await fetchBarangayName(currentUser.id); 
         }
         setLoading(false);
       } catch (err) {
@@ -63,11 +62,44 @@ const Dashboard = () => {
     fetchUserData();
   }, []);
 
+
+  const fetchBarangayName = async (userId) => {
+    try {
+      const client = await initSupabase();
+      const { data: resident, error: residentError } = await client
+        .from('residents')
+        .select('barangay_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (residentError) {
+        console.error('Error fetching resident:', residentError);
+        return;
+      }
+
+      if (!resident?.barangay_id) return;
+
+      const { data: barangay, error: brgyError } = await client
+        .from('barangays')
+        .select('barangay_name')
+        .eq('barangay_id', resident.barangay_id)
+        .single();
+
+      if (brgyError) {
+        console.error('Error fetching barangay:', brgyError);
+        return;
+      }
+
+      setBarangayName(barangay?.barangay_name || 'Unknown Barangay');
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  };
+
   const fetchUserStats = async (userId) => {
     try {
       const client = await initSupabase();
 
-      // First, get the resident_id for this user
       const { data: residentData, error: residentError } = await client
         .from('residents')
         .select('resident_id')
@@ -75,29 +107,18 @@ const Dashboard = () => {
         .single();
 
       if (residentError) {
-        // If no resident record exists, set stats to 0
         if (residentError.code === 'PGRST116') {
-          setUserStats({
-            totalRequests: 0,
-            pendingRequests: 0,
-            approvedRequests: 0
-          });
+          setUserStats({ totalRequests: 0, pendingRequests: 0, approvedRequests: 0 });
           return;
         }
         throw residentError;
       }
 
       if (!residentData) {
-        console.log('No resident record found for user');
-        setUserStats({
-          totalRequests: 0,
-          pendingRequests: 0,
-          approvedRequests: 0
-        });
+        setUserStats({ totalRequests: 0, pendingRequests: 0, approvedRequests: 0 });
         return;
       }
 
-      // Then, get the requests for this resident
       const { data, error } = await client
         .from('requests')
         .select('status')
@@ -121,7 +142,7 @@ const Dashboard = () => {
     try {
       const client = await initSupabase();
       await client.auth.signOut();
-      window.location.href = '/'; 
+      window.location.href = '/';
     } catch (err) {
       console.error('Error signing out:', err);
     }
@@ -149,19 +170,26 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50">
+      
       {/* Header */}
       <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            
+
             {/* Logo and Title */}
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
                 <Home className="w-6 h-6 md:w-10 md:h-10 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl md:text-3xl font-bold">Barangay Kurong Kurong</h1>
-                <p className="text-xs md:text-sm text-blue-100 mt-1">Online Services System (BOSS)</p>
+                <h1 className="text-xl md:text-3xl font-bold">
+                  <p>
+                    Barangay <span className="font-semibold">{barangayName || "Not Available"}</span>
+                  </p>
+                </h1>
+                <p className="text-xs md:text-sm text-blue-100 mt-1">
+                  Online Services System (BOSS)
+                </p>
               </div>
             </div>
 
@@ -356,64 +384,94 @@ const Dashboard = () => {
       </div>
 
       {/* Footer */}
-      <div className="bg-gray-800 text-white mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                <Home className="w-5 h-5" />
-                Contact Information
-              </h3>
-              <p className="text-gray-300 text-sm">Barangay Hall, Kurong Kurong</p>
-              <p className="text-gray-300 text-sm">Roxas, Isabela, Philippines</p>
-              <p className="text-gray-300 text-sm mt-2">📞 Tel: (078) 652-1234</p>
-              <p className="text-gray-300 text-sm">📱 Mobile: 0917-123-4567</p>
-              <p className="text-gray-300 text-sm">✉️ Email: brgy.kurongkurong@roxas.gov.ph</p>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Office Hours
-              </h3>
-              <p className="text-gray-300 text-sm font-semibold">Monday - Friday</p>
-              <p className="text-gray-300 text-sm">8:00 AM - 12:00 PM (Morning)</p>
-              <p className="text-gray-300 text-sm">1:00 PM - 5:00 PM (Afternoon)</p>
-              <p className="text-red-300 text-sm mt-2">⚠️ Closed on weekends and holidays</p>
-              <p className="text-gray-300 text-sm mt-2">For urgent concerns, please call our hotline.</p>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-3">Follow Us</h3>
-              <p className="text-gray-300 text-sm">📘 Facebook: @BarangayKurongKurongRX</p>
-              <p className="text-gray-300 text-sm mt-2">Stay updated with announcements and events</p>
-              <div className="mt-4">
-                <h4 className="font-semibold text-sm mb-2">Quick Links</h4>
-                <ul className="text-gray-300 text-sm space-y-1">
-                  <li>• Barangay Services</li>
-                  <li>• Document Requirements</li>
-                  <li>• Community Programs</li>
-                  <li>• Emergency Hotlines</li>
-                </ul>
-              </div>
-            </div>
+<div className="bg-gray-900 text-white mt-12">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+
+      {/* CONTACT INFORMATION */}
+      <div>
+        <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+          <Home className="w-5 h-5 text-blue-400" />
+          Contact Information
+        </h3>
+        <p className="text-gray-300 text-sm">
+          Barangay {barangayName || "—"}
+        </p>
+        <p className="text-gray-300 text-sm">Roxas, Isabela, Philippines</p>
+
+        <div className="mt-4 space-y-1">
+          <p className="text-gray-300 text-sm">📞 Tel: (078) 652-1234</p>
+          <p className="text-gray-300 text-sm">📱 Mobile: 0917-123-4567</p>
+          <p className="text-gray-300 text-sm">✉️ Email: barangay@roxas.gov.ph</p>
+        </div>
+      </div>
+
+      {/* OFFICE HOURS */}
+      <div>
+        <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-green-400" />
+          Office Hours
+        </h3>
+
+        <p className="text-gray-300 text-sm font-semibold">Monday – Friday</p>
+        <p className="text-gray-300 text-sm">8:00 AM – 12:00 PM</p>
+        <p className="text-gray-300 text-sm">1:00 PM – 5:00 PM</p>
+
+        <p className="text-red-300 text-sm mt-2">
+          ⚠️ Closed on weekends and holidays
+        </p>
+      </div>
+
+      {/* QUICK LINKS */}
+      <div>
+        <h3 className="font-bold text-lg mb-3">Quick Links</h3>
+
+        <ul className="space-y-2 text-gray-300 text-sm">
+          <li className="hover:text-white transition cursor-pointer">• Barangay Services</li>
+          <li className="hover:text-white transition cursor-pointer">• Document Requirements</li>
+          <li className="hover:text-white transition cursor-pointer">• Community Announcements</li>
+          <li className="hover:text-white transition cursor-pointer">• Emergency Hotlines</li>
+        </ul>
+
+        {/* SOCIAL ICONS */}
+        <div className="flex items-center gap-4 mt-5">
+          <div className="p-2 bg-gray-700 rounded-full hover:bg-blue-500 transition cursor-pointer">
+            <i className="fab fa-facebook-f"></i>
           </div>
-          <div className="border-t border-gray-700 mt-8 pt-6 text-center">
-            <p className="text-gray-400 text-sm">
-              © 2025 Barangay Kurong Kurong, Roxas, Isabela. All rights reserved.
-            </p>
-            <p className="text-gray-500 text-xs mt-1">
-              Powered by Barangay Online Services System (BOSS)
-            </p>
+          <div className="p-2 bg-gray-700 rounded-full hover:bg-sky-400 transition cursor-pointer">
+            <i className="fab fa-twitter"></i>
+          </div>
+          <div className="p-2 bg-gray-700 rounded-full hover:bg-pink-500 transition cursor-pointer">
+            <i className="fab fa-instagram"></i>
           </div>
         </div>
       </div>
 
-      {/* Click outside to close dropdown */}
-      {userDropdownOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setUserDropdownOpen(false)}
-        />
-      )}
+    </div>
+
+    {/* FOOTER BOTTOM */}
+    <div className="border-t border-gray-700 mt-10 pt-6 text-center">
+      <p className="text-gray-400 text-sm">
+        © 2025 {barangayName || "Barangay"}, Roxas, Isabela. All rights reserved.
+      </p>
+
+      <p className="text-gray-500 text-xs mt-1">
+        Powered by the Barangay Online Services System (BOSS)
+      </p>
+    </div>
+
+  </div>
+</div>
+
+
+{/* Overlay for dropdown closing */}
+{userDropdownOpen && (
+  <div
+    className="fixed inset-0 z-40"
+    onClick={() => setUserDropdownOpen(false)}
+  />
+)}
     </div>
   );
 };
