@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Home, Clock, User, Settings, LogOut, Menu, X, Bell, ChevronDown } from 'lucide-react';
+import { FileText, Home, Clock, User, Settings, LogOut, Menu, X, Bell, ChevronDown, Shield } from 'lucide-react';
 
 // Import your page components
 import NewRequestPage from './NewRequestPage';
 import MyRequestsPage from './MyRequestsPage';
 import SettingsPage from './SettingPage';
 import UsersPage from './UserPages';
+import RequestOfficialVerificationPage from './RequestOfficialVerificationPage';
 
 
 //Note: This is just a experimental thats why the supabase init is here.
@@ -130,6 +131,7 @@ const Dashboard = () => {
   const navItems = [
     { id: 'new-request', label: 'New Request', icon: FileText },
     { id: 'my-requests', label: 'My Requests', icon: Clock },
+    { id: 'become-official', label: 'Become Official', icon: Shield },
     { id: 'user-page', label: 'My Account', icon: User },
     { id: 'setting-page', label: 'Settings', icon: Settings }
   ];
@@ -299,7 +301,7 @@ const Dashboard = () => {
       <div className="hidden lg:block bg-white shadow-md sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-1">
-            {navItems.slice(0, 2).map((item) => {
+            {navItems.slice(0, 3).map((item) => {
               const Icon = item.icon;
               return (
                 <button
@@ -348,6 +350,7 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeView === 'new-request' && <NewRequestPage />}
         {activeView === 'my-requests' && <MyRequestsPage />}
+        {activeView === 'become-official' && <RequestOfficialVerificationPage />}
         {activeView === 'user-page' && <UsersPage />}
         {activeView === 'setting-page' && <SettingsPage />}
       </div>

@@ -334,7 +334,7 @@ const SuperAdminVerificationsPage = () => {
               animate={{ opacity: 1, y: 0 }}
               className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3"
             >
-              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
               <p className="text-sm text-green-800">{successMessage}</p>
             </motion.div>
           )}
@@ -346,7 +346,7 @@ const SuperAdminVerificationsPage = () => {
               animate={{ opacity: 1, y: 0 }}
               className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3"
             >
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
               <p className="text-sm text-red-800">{error}</p>
             </motion.div>
           )}
@@ -476,7 +476,7 @@ const SuperAdminVerificationsPage = () => {
           >
             <div className="flex flex-col lg:flex-row gap-4">
               {/* Search Input */}
-              <div className="flex-grow relative">
+              <div className="grow relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"

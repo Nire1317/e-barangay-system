@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePermissions } from "../../hooks/usePermissions";
+import { supabase } from "../../services/supabaseClient";
 import AppSideBar from "../../components/ui/side-bar";
 import {
   User,
@@ -15,7 +16,6 @@ import {
   Download,
   Trash2,
   Save,
-  Camera,
 } from "lucide-react";
 
 // Navigation header component
@@ -154,7 +154,7 @@ const ActionButton = ({ icon: Icon, label, variant = "primary", onClick }) => {
 };
 
 function Settings() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { roleName } = usePermissions();
 
   // State management
@@ -184,9 +184,266 @@ function Settings() {
     loginAlerts: true,
   });
 
-  const handleSaveChanges = () => {
-    console.log("Saving changes...");
-    // Add save logic here
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Load user settings on mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (user?.id) {
+        await loadUserSettings();
+      }
+    };
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const loadUserSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error;
+
+      if (data) {
+        setProfile({
+          fullName: user?.fullName || "",
+          email: user?.email || "",
+          phone: data.phone || "",
+          address: data.address || "",
+        });
+
+        setNotifications({
+          emailNotifications: data.email_notifications ?? true,
+          pushNotifications: data.push_notifications ?? false,
+          smsNotifications: data.sms_notifications ?? false,
+          requestUpdates: data.request_updates ?? true,
+          systemAlerts: data.system_alerts ?? true,
+        });
+
+        setPreferences({
+          language: data.language || "en",
+          theme: data.theme || "light",
+          timezone: data.timezone || "Asia/Manila",
+        });
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+      setErrorMessage("Failed to load settings");
+      setTimeout(() => setErrorMessage(""), 5000);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      // Update user profile (full_name, email)
+      const { error: userError } = await supabase
+        .from("users")
+        .update({
+          full_name: profile.fullName,
+          email: profile.email,
+        })
+        .eq("user_id", user.id);
+
+      if (userError) throw userError;
+
+      // Update or insert user settings
+      const { error: settingsError } = await supabase
+        .from("user_settings")
+        .upsert(
+          {
+            user_id: user.id,
+            phone: profile.phone,
+            address: profile.address,
+            email_notifications: notifications.emailNotifications,
+            push_notifications: notifications.pushNotifications,
+            sms_notifications: notifications.smsNotifications,
+            request_updates: notifications.requestUpdates,
+            system_alerts: notifications.systemAlerts,
+            language: preferences.language,
+            theme: preferences.theme,
+            timezone: preferences.timezone,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (settingsError) throw settingsError;
+
+      // Refresh user data
+      if (refreshUser) await refreshUser();
+
+      setSuccessMessage("Settings saved successfully!");
+      setTimeout(() => setSuccessMessage(""), 5000);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      setErrorMessage("Failed to save settings. Please try again.");
+      setTimeout(() => setErrorMessage(""), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      // Validate passwords
+      if (!passwordData.currentPassword || !passwordData.newPassword) {
+        setErrorMessage("Please fill in all password fields");
+        setTimeout(() => setErrorMessage(""), 5000);
+        return;
+      }
+
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        setErrorMessage("New passwords do not match");
+        setTimeout(() => setErrorMessage(""), 5000);
+        return;
+      }
+
+      if (passwordData.newPassword.length < 6) {
+        setErrorMessage("New password must be at least 6 characters");
+        setTimeout(() => setErrorMessage(""), 5000);
+        return;
+      }
+
+      // Update password
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword,
+      });
+
+      if (error) throw error;
+
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setSuccessMessage("Password updated successfully!");
+      setTimeout(() => setSuccessMessage(""), 5000);
+    } catch (error) {
+      console.error("Error updating password:", error);
+      setErrorMessage(error.message || "Failed to update password");
+      setTimeout(() => setErrorMessage(""), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch all user data
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (userError) throw userError;
+
+      const { data: settingsData, error: settingsError } = await supabase
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (settingsError && settingsError.code !== "PGRST116")
+        throw settingsError;
+
+      const { data: requestsData, error: requestsError } = await supabase
+        .from("document_requests")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (requestsError) throw requestsError;
+
+      // Compile data
+      const exportData = {
+        user: userData,
+        settings: settingsData,
+        requests: requestsData,
+        exportedAt: new Date().toISOString(),
+      };
+
+      // Create and download JSON file
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `user-data-${user.id}-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setSuccessMessage("Data exported successfully!");
+      setTimeout(() => setSuccessMessage(""), 5000);
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      setErrorMessage("Failed to export data");
+      setTimeout(() => setErrorMessage(""), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    const doubleConfirmed = window.confirm(
+      "This will permanently delete all your data. Are you absolutely sure?"
+    );
+
+    if (!doubleConfirmed) return;
+
+    try {
+      setLoading(true);
+
+      // Delete user data (cascade should handle related records)
+      const { error } = await supabase
+        .from("users")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      // Sign out
+      await supabase.auth.signOut();
+
+      alert("Account deleted successfully");
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      setErrorMessage("Failed to delete account. Please contact support.");
+      setTimeout(() => setErrorMessage(""), 5000);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -197,6 +454,48 @@ function Settings() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <PageHeader />
 
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+              <div className="shrink-0">
+                <svg
+                  className="w-5 h-5 text-green-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-green-800">
+                {successMessage}
+              </p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <div className="shrink-0">
+                <svg
+                  className="w-5 h-5 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-red-800">{errorMessage}</p>
+            </div>
+          )}
+
           <div className="space-y-6">
             {/* Profile Settings */}
             <SettingsSection
@@ -205,26 +504,6 @@ function Settings() {
               icon={User}
             >
               <div className="space-y-4">
-                {/* Profile Picture */}
-                <div className="flex items-center gap-6 pb-6 border-b border-slate-200">
-                  <div className="relative">
-                    <div className="w-20 h-20 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-                      {user?.fullName?.charAt(0) || "U"}
-                    </div>
-                    <button className="absolute bottom-0 right-0 p-1.5 bg-blue-600 rounded-full text-white hover:bg-blue-700 transition-colors">
-                      <Camera className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900">
-                      Profile Photo
-                    </h4>
-                    <p className="text-sm text-slate-600 mt-0.5">
-                      JPG, PNG or GIF. Max size of 2MB.
-                    </p>
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     label="Full Name"
@@ -261,71 +540,6 @@ function Settings() {
                     placeholder="Your address"
                   />
                 </div>
-              </div>
-            </SettingsSection>
-
-            {/* Notification Settings */}
-            <SettingsSection
-              title="Notifications"
-              description="Manage how you receive updates and alerts"
-              icon={Bell}
-            >
-              <div className="space-y-2 divide-y divide-slate-200">
-                <ToggleSwitch
-                  label="Email Notifications"
-                  description="Receive notifications via email"
-                  checked={notifications.emailNotifications}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      emailNotifications: !notifications.emailNotifications,
-                    })
-                  }
-                />
-                <ToggleSwitch
-                  label="Push Notifications"
-                  description="Receive push notifications in your browser"
-                  checked={notifications.pushNotifications}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      pushNotifications: !notifications.pushNotifications,
-                    })
-                  }
-                />
-                <ToggleSwitch
-                  label="SMS Notifications"
-                  description="Receive important updates via SMS"
-                  checked={notifications.smsNotifications}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      smsNotifications: !notifications.smsNotifications,
-                    })
-                  }
-                />
-                <ToggleSwitch
-                  label="Request Updates"
-                  description="Get notified about your document request status"
-                  checked={notifications.requestUpdates}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      requestUpdates: !notifications.requestUpdates,
-                    })
-                  }
-                />
-                <ToggleSwitch
-                  label="System Alerts"
-                  description="Receive important system announcements"
-                  checked={notifications.systemAlerts}
-                  onChange={() =>
-                    setNotifications({
-                      ...notifications,
-                      systemAlerts: !notifications.systemAlerts,
-                    })
-                  }
-                />
               </div>
             </SettingsSection>
 
@@ -370,68 +584,47 @@ function Settings() {
                       label="Current Password"
                       type="password"
                       placeholder="Enter current password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) =>
+                        setPasswordData({
+                          ...passwordData,
+                          currentPassword: e.target.value,
+                        })
+                      }
                     />
                     <FormField
                       label="New Password"
                       type="password"
                       placeholder="Enter new password"
+                      value={passwordData.newPassword}
+                      onChange={(e) =>
+                        setPasswordData({
+                          ...passwordData,
+                          newPassword: e.target.value,
+                        })
+                      }
                     />
                     <FormField
                       label="Confirm New Password"
                       type="password"
                       placeholder="Confirm new password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) =>
+                        setPasswordData({
+                          ...passwordData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
                     />
                   </div>
-                  <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                    Update Password
+                  <button
+                    onClick={handlePasswordChange}
+                    disabled={loading}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? "Updating..." : "Update Password"}
                   </button>
                 </div>
-              </div>
-            </SettingsSection>
-
-            {/* Preferences */}
-            <SettingsSection
-              title="Preferences"
-              description="Customize your experience"
-              icon={Palette}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SelectField
-                  label="Language"
-                  value={preferences.language}
-                  onChange={(e) =>
-                    setPreferences({ ...preferences, language: e.target.value })
-                  }
-                  options={[
-                    { value: "en", label: "English" },
-                    { value: "fil", label: "Filipino" },
-                    { value: "es", label: "Spanish" },
-                  ]}
-                />
-                <SelectField
-                  label="Theme"
-                  value={preferences.theme}
-                  onChange={(e) =>
-                    setPreferences({ ...preferences, theme: e.target.value })
-                  }
-                  options={[
-                    { value: "light", label: "Light" },
-                    { value: "dark", label: "Dark" },
-                    { value: "auto", label: "Auto" },
-                  ]}
-                />
-                <SelectField
-                  label="Timezone"
-                  value={preferences.timezone}
-                  onChange={(e) =>
-                    setPreferences({ ...preferences, timezone: e.target.value })
-                  }
-                  options={[
-                    { value: "Asia/Manila", label: "Manila (GMT+8)" },
-                    { value: "UTC", label: "UTC" },
-                    { value: "America/New_York", label: "New York (EST)" },
-                  ]}
-                />
               </div>
             </SettingsSection>
 
@@ -455,6 +648,7 @@ function Settings() {
                     icon={Download}
                     label="Download"
                     variant="secondary"
+                    onClick={handleDownloadData}
                   />
                 </div>
                 <div className="flex items-center justify-between py-3 border-b border-slate-200">
@@ -466,22 +660,41 @@ function Settings() {
                       Permanently delete your account and data
                     </p>
                   </div>
-                  <ActionButton icon={Trash2} label="Delete" variant="danger" />
+                  <ActionButton
+                    icon={Trash2}
+                    label="Delete"
+                    variant="danger"
+                    onClick={handleDeleteAccount}
+                  />
                 </div>
               </div>
             </SettingsSection>
 
             {/* Save Changes Button */}
             <div className="flex justify-end gap-3 pt-4">
-              <button className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium">
+              <button
+                onClick={() => window.location.reload()}
+                disabled={loading}
+                className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Cancel
               </button>
               <button
                 onClick={handleSaveChanges}
-                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Save className="w-4 h-4" />
-                Save Changes
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
               </button>
             </div>
           </div>

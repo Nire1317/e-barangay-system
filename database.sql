@@ -87,14 +87,33 @@ CREATE TABLE public.residents (
   CONSTRAINT residents_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id),
   CONSTRAINT residents_barangay_id_fkey FOREIGN KEY (barangay_id) REFERENCES public.barangays(barangay_id)
 );
+CREATE TABLE public.user_settings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  phone character varying,
+  address text,
+  email_notifications boolean DEFAULT true,
+  push_notifications boolean DEFAULT false,
+  sms_notifications boolean DEFAULT false,
+  request_updates boolean DEFAULT true,
+  system_alerts boolean DEFAULT true,
+  language character varying DEFAULT 'en'::character varying,
+  theme character varying DEFAULT 'light'::character varying,
+  timezone character varying DEFAULT 'Asia/Manila'::character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_settings_pkey PRIMARY KEY (id),
+  CONSTRAINT user_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id)
+);
 CREATE TABLE public.users (
   user_id uuid NOT NULL,
   full_name character varying NOT NULL,
   email character varying NOT NULL UNIQUE,
-  role character varying DEFAULT 'resident'::character varying CHECK (role::text = ANY (ARRAY['resident'::character varying, 'official'::character varying]::text[])),
+  role character varying DEFAULT 'resident'::character varying CHECK (role::text = ANY (ARRAY['resident'::character varying::text, 'official'::character varying::text, 'admin'::character varying::text])),
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   barangay_id uuid,
   is_verified boolean DEFAULT false,
+  profile_picture_url text,
   CONSTRAINT users_pkey PRIMARY KEY (user_id),
   CONSTRAINT users_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
   CONSTRAINT users_barangay_id_fkey FOREIGN KEY (barangay_id) REFERENCES public.barangays(barangay_id)
