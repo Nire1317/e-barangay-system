@@ -35,12 +35,20 @@ const NewRequestPage = () => {
   const [hasBarangay, setHasBarangay] = useState(false);
 
   const documentTypes = [
-    { value: 'barangay-clearance', label: 'Barangay Clearance', fee: '₱50.00' },
-    { value: 'indigency', label: 'Certificate of Indigency', fee: 'FREE' },
-    { value: 'residency', label: 'Certificate of Residency', fee: '₱30.00' },
-    { value: 'business-clearance', label: 'Barangay Business Clearance', fee: '₱500.00' },
-    { value: 'good-moral', label: 'Certificate of Good Moral Character', fee: '₱30.00' },
-    { value: 'low-income', label: 'Certificate of Low Income', fee: 'FREE' }
+    { value: "barangay-clearance", label: "Barangay Clearance", fee: "FREE" },
+    { value: "indigency", label: "Certificate of Indigency", fee: "FREE" },
+    { value: "residency", label: "Certificate of Residency", fee: "FREE" },
+    {
+      value: "business-clearance",
+      label: "Barangay Business Clearance",
+      fee: "FREE",
+    },
+    {
+      value: "good-moral",
+      label: "Certificate of Good Moral Character",
+      fee: "FREE",
+    },
+    { value: "low-income", label: "Certificate of Low Income", fee: "FREE" },
   ];
 
   const validIdTypes = [
@@ -622,7 +630,7 @@ const NewRequestPage = () => {
           <div className="mb-4">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               <MapPin className="w-4 h-4 inline mr-1" />
-              Complete Address <span className="text-red-500">*</span>
+              Purok/Street Address <span className="text-red-500">*</span>
             </label>
             <textarea
               name="address"

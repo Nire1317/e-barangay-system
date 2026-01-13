@@ -73,6 +73,11 @@ const OFFICIAL_MENU_ITEMS = [
     path: "/manage-requests",
   },
   {
+    name: "Official Verifications",
+    icon: Shield,
+    path: "/official-verifications",
+  },
+  {
     name: "Residents",
     icon: Users,
     path: "/residents",
