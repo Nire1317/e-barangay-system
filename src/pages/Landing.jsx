@@ -127,10 +127,9 @@ function Landing() {
             <div className="slide-in-right relative">
               <div className="relative z-10">
                 <img
-                  src="/public/BOSS.jpg"
-                  // src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 500'%3E%3Crect fill='%234f46e5' width='400' height='500' rx='12'/%3E%3Crect fill='white' x='20' y='60' width='360' height='80' rx='8'/%3E%3Crect fill='%23e5e7eb' x='40' y='80' width='200' height='15' rx='7.5'/%3E%3Crect fill='%23e5e7eb' x='40' y='105' width='150' height='15' rx='7.5'/%3E%3Crect fill='white' x='20' y='160' width='360' height='80' rx='8'/%3E%3Crect fill='%23e5e7eb' x='40' y='180' width='200' height='15' rx='7.5'/%3E%3Crect fill='%23e5e7eb' x='40' y='205' width='150' height='15' rx='7.5'/%3E%3Crect fill='white' x='20' y='260' width='360' height='80' rx='8'/%3E%3Crect fill='%23e5e7eb' x='40' y='280' width='200' height='15' rx='7.5'/%3E%3Crect fill='%23e5e7eb' x='40' y='305' width='150' height='15' rx='7.5'/%3E%3Ccircle fill='%2310b981' cx='350' cy='100' r='12'/%3E%3Ccircle fill='%23fbbf24' cx='350' cy='200' r='12'/%3E%3Ccircle fill='%2310b981' cx='350' cy='300' r='12'/%3E%3C/svg%3E"
+                  src="/BOSS.jpg"
                   alt="BOSS Dashboard Preview"
-                  className="rounded-xl shadow-lg hover-lift border border-slate-300 h-180 w-2xl" /* Sharper corners (rounded-xl), border, subtle shadow */
+                  className="rounded-xl shadow-lg hover-lift border border-slate-300 h-180 w-2xl"
                 />
               </div>
             </div>
