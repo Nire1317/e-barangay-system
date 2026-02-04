@@ -14,6 +14,7 @@ import Dashboard from "../pages/residents/Dashboard";
 import JoinBarangayPage from "../pages/residents/JoinBarangayPage";
 import MyRequestsPage from "../pages/residents/MyRequestsPage";
 import RequestOfficialVerificationPage from "../pages/residents/RequestOfficialVerificationPage";
+import BarangayClearance from "../components/ui/brgyClearance";
 
 // Official Pages
 import AdminDashboard from "../pages/officials/AdminDashboard";
@@ -62,6 +63,16 @@ const AppRouter = () => {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/BarangayClearance"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.RESIDENT]}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/join-barangay"
             element={

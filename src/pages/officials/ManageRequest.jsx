@@ -1,20 +1,31 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRequests } from "../../hooks/useRequests";
 import { OfficialOnly } from "../../components/PermissionGate";
+
 import {
-  FileTextIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  SearchIcon,
-  FilterIcon,
-  EyeIcon,
-  CheckIcon,
-  XIcon,
-} from "../../components/ui/icons";
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Search,
+  Filter,
+  Eye,
+  Check,
+  X,
+  Printer,
+  Upload,
+} from "lucide-react";
+
 import AppSideBar from "../../components/ui/side-bar";
+// import {
+//   CertificateTemplates,
+//   getCertificateTemplate,
+// } from "../../components/certificates/CertificateTemplates";
+
+import { getCertificateTemplate } from "../../components/ui/certificateTemplate";
+import "./CertificatePrint.css";
 
 // Constants
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Denied", "Completed"];
@@ -26,34 +37,45 @@ const STATUS_COLORS = {
   Completed: "bg-green-100 text-green-800 border-green-200",
 };
 
-// Helper functions
+// Helpers
 const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
     month: "short",
     day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 };
 
 const getStatusIcon = (status) => {
   switch (status) {
     case "Pending":
-      return ClockIcon;
+      return Clock;
     case "Approved":
-      return CheckCircleIcon;
+      return CheckCircle;
     case "Denied":
-      return XCircleIcon;
+      return XCircle;
     case "Completed":
-      return CheckCircleIcon;
+      return CheckCircle;
     default:
-      return FileTextIcon;
+      return FileText;
   }
 };
 
-// Loading skeleton component
+// const getOrdinalSuffix = (day) => {
+//   if (day > 3 && day < 21) return "th";
+//   switch (day % 10) {
+//     case 1:
+//       return "st";
+//     case 2:
+//       return "nd";
+//     case 3:
+//       return "rd";
+//     default:
+//       return "th";
+//   }
+// };
+
+// Loading Skeleton
 const LoadingSkeleton = () => (
   <div className="space-y-4">
     {[...Array(5)].map((_, i) => (
@@ -62,45 +84,44 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-// Navigation header component
+function CertificateViewer({ data, user, type }) {
+  const Template = getCertificateTemplate(type);
+
+  return (
+    <div className="certificate-container">
+      <Template data={data} user={user} />
+    </div>
+  );
+}
+
+// Navigation header
 const NavigationHeader = ({ user, roleName }) => (
   <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10 shadow-sm">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between h-14.5 items-center">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
-            Manage Requests
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-slate-900 leading-tight">
-              {user?.fullName || "Admin"}
-            </p>
-            <p className="text-xs text-slate-600 font-medium leading-tight mt-0.5">
-              {roleName || "Administrator"}
-            </p>
-          </div>
+        <h1 className="text-xl font-semibold text-slate-900">
+          Manage Requests
+        </h1>
+        <div className="text-right hidden sm:block">
+          <p className="text-sm font-semibold">{user?.fullName || "Admin"}</p>
+          <p className="text-xs text-slate-600">{roleName}</p>
         </div>
       </div>
     </div>
   </nav>
 );
 
-// Page header component
+// Page header
 const PageHeader = ({ totalRequests, pendingCount }) => (
   <div className="mb-8">
-    <h2 className="text-4xl font-bold text-slate-900 tracking-tight leading-tight">
-      Document Requests
-    </h2>
-    <p className="text-base text-slate-600 mt-2 font-medium">
+    <h2 className="text-4xl font-bold">Document Requests</h2>
+    <p className="text-base text-slate-600 mt-2">
       Managing {totalRequests} total requests • {pendingCount} pending review
     </p>
   </div>
 );
 
-// Stats cards component
+// Stats cards
 const StatsCards = ({ stats }) => (
   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
     {stats.map((stat, index) => {
@@ -112,10 +133,8 @@ const StatsCards = ({ stats }) => (
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-              <p className="text-3xl font-bold text-slate-900 mt-2">
-                {stat.value}
-              </p>
+              <p className="text-sm text-slate-600">{stat.title}</p>
+              <p className="text-3xl font-bold mt-2">{stat.value}</p>
               <p className="text-xs text-slate-500 mt-1">{stat.trend}</p>
             </div>
             <div className={`${stat.bgColor} ${stat.color} p-3 rounded-lg`}>
@@ -128,36 +147,34 @@ const StatsCards = ({ stats }) => (
   </div>
 );
 
-// Filters component
+// Filters bar
 const FiltersBar = ({
   searchTerm,
   setSearchTerm,
   statusFilter,
   setStatusFilter,
 }) => (
-  <div className="bg-white rounded-lg p-4 shadow-sm border border-slate-200 mb-6">
+  <div className="bg-white rounded-lg p-4 shadow-sm border mb-6">
     <div className="flex flex-col md:flex-row gap-4">
       <div className="flex-1 relative">
-        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
         <input
           type="text"
-          placeholder="Search by resident name, request type, or purpose..."
+          placeholder="Search requests..."
+          className="w-full pl-10 pr-4 py-2 border rounded-lg"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
       <div className="flex items-center gap-2">
-        <FilterIcon className="w-5 h-5 text-slate-400" />
+        <Filter className="w-5 h-5 text-slate-400" />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+          className="px-4 py-2 border rounded-lg"
         >
-          {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status}>
-              {status === "All" ? "All Status" : status}
-            </option>
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s}>{s}</option>
           ))}
         </select>
       </div>
@@ -165,127 +182,127 @@ const FiltersBar = ({
   </div>
 );
 
-// Request table component
+// Requests Table Component
 const RequestsTable = ({
   requests,
   onViewDetails,
   onApprove,
   onDeny,
+  onPrintCertificate,
   isLoading,
 }) => {
-  if (isLoading) {
-    return <LoadingSkeleton />;
-  }
+  if (isLoading) return <LoadingSkeleton />;
 
-  if (requests.length === 0) {
+  if (!requests || requests.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-12 shadow-sm border border-slate-200 text-center">
-        <FileTextIcon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+      <div className="bg-white rounded-lg p-12 text-center">
+        <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-slate-900 mb-2">
           No requests found
         </h3>
-        <p className="text-slate-600">
-          Try adjusting your search or filter criteria
-        </p>
+        <p className="text-slate-600">Try adjusting your search or filters</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-200">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                 Resident
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Request Type
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                Document Type
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                 Purpose
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                 Status
               </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Submitted
-              </th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="bg-white divide-y divide-slate-200">
             {requests.map((request) => {
               const StatusIcon = getStatusIcon(request.status);
               return (
                 <tr
                   key={request.request_id}
-                  className="hover:bg-slate-50 transition-colors"
+                  className="hover:bg-slate-50 transition"
                 >
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {request.resident_name}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {request.contact_number}
-                      </p>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-slate-900">
+                      {request.resident_name}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-slate-900">
+                      {request.type_name}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm font-medium text-slate-900">
-                      {request.type_name}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-slate-600 max-w-xs truncate">
+                    <div className="text-sm text-slate-600 max-w-xs truncate">
                       {request.purpose || "N/A"}
-                    </p>
+                    </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-slate-600">
+                      {formatDate(request.created_at)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                        STATUS_COLORS[request.status]
-                      }`}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${STATUS_COLORS[request.status] || "bg-slate-100 text-slate-800"}`}
                     >
-                      <StatusIcon className="w-3.5 h-3.5" />
+                      <StatusIcon className="w-3 h-3 mr-1" />
                       {request.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-slate-600">
-                      {formatDate(request.submitted_at)}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => onViewDetails(request)}
-                        className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="View details"
+                        className="text-blue-600 hover:text-blue-800"
+                        title="View Details"
                       >
-                        <EyeIcon className="w-4 h-4" />
+                        <Eye className="w-5 h-5" />
                       </button>
                       {request.status === "Pending" && (
                         <>
                           <button
                             onClick={() => onApprove(request.request_id)}
-                            className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            className="text-green-600 hover:text-green-800"
                             title="Approve"
                           >
-                            <CheckIcon className="w-4 h-4" />
+                            <Check className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => onDeny(request.request_id)}
-                            className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="text-red-600 hover:text-red-800"
                             title="Deny"
                           >
-                            <XIcon className="w-4 h-4" />
+                            <X className="w-5 h-5" />
                           </button>
                         </>
+                      )}
+                      {(request.status === "Approved" ||
+                        request.status === "Completed") && (
+                        <button
+                          onClick={() => onPrintCertificate(request)}
+                          className="text-purple-600 hover:text-purple-800"
+                          title="Print Certificate"
+                        >
+                          <Printer className="w-5 h-5" />
+                        </button>
                       )}
                     </div>
                   </td>
@@ -299,272 +316,344 @@ const RequestsTable = ({
   );
 };
 
-// Request details modal component
-const RequestDetailsModal = ({ request, onClose, onApprove, onDeny, onComplete }) => {
+// Request Details Modal (kept same as before)
+const RequestDetailsModal = ({
+  request,
+  onClose,
+  onApprove,
+  onDeny,
+  onComplete,
+}) => {
   if (!request) return null;
-
-  const StatusIcon = getStatusIcon(request.status);
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-slate-900">
-            Request Details
-          </h3>
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-slate-900">Request Details</h2>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="text-slate-400 hover:text-slate-600"
           >
-            <XIcon className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
-
-        <div className="p-6 space-y-6">
-          <div className="flex items-center gap-3">
-            <span
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border ${
-                STATUS_COLORS[request.status]
-              }`}
-            >
-              <StatusIcon className="w-4 h-4" />
-              {request.status}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Resident Name
-              </label>
-              <p className="text-sm font-medium text-slate-900 mt-1">
-                {request.resident_name}
-              </p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Contact Number
-              </label>
-              <p className="text-sm font-medium text-slate-900 mt-1">
-                {request.contact_number || "N/A"}
-              </p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Request Type
-              </label>
-              <p className="text-sm font-medium text-slate-900 mt-1">
-                {request.type_name}
-              </p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Submitted Date
-              </label>
-              <p className="text-sm font-medium text-slate-900 mt-1">
-                {formatDate(request.submitted_at)}
-              </p>
-            </div>
-          </div>
-
+        <div className="p-6 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <label className="text-sm font-semibold text-slate-700">
+              Resident Name
+            </label>
+            <p className="text-slate-900 mt-1">{request.resident_name}</p>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-slate-700">
+              Document Type
+            </label>
+            <p className="text-slate-900 mt-1">{request.type_name}</p>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-slate-700">
               Purpose
             </label>
-            <p className="text-sm text-slate-900 mt-1 bg-slate-50 p-4 rounded-lg">
-              {request.purpose || "No purpose provided"}
+            <p className="text-slate-900 mt-1">{request.purpose || "N/A"}</p>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-slate-700">
+              Address
+            </label>
+            <p className="text-slate-900 mt-1">{request.address || "N/A"}</p>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-slate-700">
+              Date Requested
+            </label>
+            <p className="text-slate-900 mt-1">
+              {formatDate(request.created_at)}
             </p>
           </div>
-
-          {request.remarks && (
-            <div>
-              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                Remarks
-              </label>
-              <p className="text-sm text-slate-900 mt-1 bg-slate-50 p-4 rounded-lg">
-                {request.remarks}
-              </p>
-            </div>
-          )}
-
-          {request.reviewed_by && (
-            <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-200">
-              <div>
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Reviewed By
-                </label>
-                <p className="text-sm font-medium text-slate-900 mt-1">
-                  {request.reviewer_name}
-                </p>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Reviewed Date
-                </label>
-                <p className="text-sm font-medium text-slate-900 mt-1">
-                  {formatDate(request.reviewed_at)}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {request.status === "Pending" && (
-          <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              Close
-            </button>
-            <button
-              onClick={() => {
-                onDeny(request.request_id);
-                onClose();
-              }}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Deny Request
-            </button>
-            <button
-              onClick={() => {
-                onApprove(request.request_id);
-                onClose();
-              }}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Approve Request
-            </button>
+          <div>
+            <label className="text-sm font-semibold text-slate-700">
+              Status
+            </label>
+            <p className="text-slate-900 mt-1">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${STATUS_COLORS[request.status]}`}
+              >
+                {request.status}
+              </span>
+            </p>
           </div>
-        )}
-
-        {request.status === "Approved" && (
-          <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              Close
-            </button>
+        </div>
+        <div className="sticky bottom-0 bg-slate-50 border-t px-6 py-4 flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
+          >
+            Close
+          </button>
+          {request.status === "Pending" && (
+            <>
+              <button
+                onClick={() => {
+                  onDeny(request.request_id);
+                  onClose();
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Deny
+              </button>
+              <button
+                onClick={() => {
+                  onApprove(request.request_id);
+                  onClose();
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Approve
+              </button>
+            </>
+          )}
+          {request.status === "Approved" && (
             <button
               onClick={() => {
                 onComplete(request.request_id);
                 onClose();
               }}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              <CheckIcon className="w-4 h-4" />
               Mark as Completed
             </button>
-          </div>
-        )}
-
-        {request.status === "Completed" && (
-          <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircleIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">Document ready for pickup</span>
-            </div>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        )}
-
-        {request.status === "Denied" && (
-          <div className="sticky bottom-0 bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-// Main component
+// Certificate Modal with Legal Size Paper
+const CertificateModal = ({ certificateData, onClose, user }) => {
+  const [uploadedPhoto, setUploadedPhoto] = useState(null);
+  const fileInputRef = useRef();
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setUploadedPhoto(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const printCertificate = () => {
+    window.print();
+  };
+
+  const updatedData = {
+    ...certificateData.data,
+    photoUrl: uploadedPhoto || certificateData.data.photoUrl,
+    barangayName: user?.barangayName || "Luna",
+  };
+
+  const CertificateComponent = getCertificateTemplate(certificateData.typeName);
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 print:hidden">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-900">
+              Certificate Preview - {certificateData.typeName}
+            </h2>
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+              >
+                <Upload className="w-4 h-4" /> Upload Photo
+              </button>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-8 bg-gray-50">
+            <div
+              className="bg-white shadow-lg"
+              style={{
+                width: "8.5in",
+                minHeight: "13in",
+                margin: "0 auto",
+                padding: "0.75in",
+              }}
+            >
+              <CertificateComponent data={updatedData} user={user} />
+
+              {/* Signatories Footer */}
+              <div className="mt-16 pt-8 border-t-2 border-gray-300">
+                <div className="grid grid-cols-2 gap-12">
+                  <div className="text-center">
+                    <div className="border-b-2 border-black mb-2 h-16"></div>
+                    <p className="font-bold uppercase text-sm">
+                      HON. ROMAR V. CALAMASA
+                    </p>
+                    <p className="text-xs">
+                      Sangguniang Barangay / Officer of the Day
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="border-b-2 border-black mb-2 h-16"></div>
+                    <p className="font-bold uppercase text-sm">
+                      HON. JUANITO V. RAMOS
+                    </p>
+                    <p className="text-xs">Punong Barangay</p>
+                  </div>
+                </div>
+                <p className="text-center text-xs mt-12 font-semibold">
+                  Not valid without Dry Seal
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="sticky bottom-0 bg-slate-50 border-t px-6 py-4 flex items-center justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={printCertificate}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Printer className="w-4 h-4" /> Print Certificate
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Printable version - Legal Size */}
+      <div className="hidden print:block">
+        <div style={{ width: "8.5in", minHeight: "13in", padding: "0.75in" }}>
+          <CertificateComponent data={updatedData} user={user} />
+          <div className="mt-16 pt-8 border-t-2 border-gray-300">
+            <div className="grid grid-cols-2 gap-12">
+              <div className="text-center">
+                <div className="border-b-2 border-black mb-2 h-16"></div>
+                <p className="font-bold uppercase text-sm">
+                  HON. ROMAR V. CALAMASA
+                </p>
+                <p className="text-xs">
+                  Sangguniang Barangay / Officer of the Day
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="border-b-2 border-black mb-2 h-16"></div>
+                <p className="font-bold uppercase text-sm">
+                  HON. JUANITO V. RAMOS
+                </p>
+                <p className="text-xs">Punong Barangay</p>
+              </div>
+            </div>
+            <p className="text-center text-xs mt-12 font-semibold">
+              Not valid without Dry Seal
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @media print {
+          @page { size: legal; margin: 0; }
+          body * { visibility: hidden; }
+          .print\\:block, .print\\:block * { visibility: visible; }
+          .print\\:block { position: absolute; left: 0; top: 0; }
+        }
+      `}</style>
+    </>
+  );
+};
+
+// Main Component
 function ManageRequests() {
   const { user } = useAuth();
   const { roleName } = usePermissions();
-  const { requests, isLoading, approveRequest, denyRequest, updateRequestStatus, getStats } =
-    useRequests();
+  const {
+    requests,
+    isLoading,
+    approveRequest,
+    denyRequest,
+    updateRequestStatus,
+    getStats,
+  } = useRequests();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
+  const [certificateData, setCertificateData] = useState(null);
+
+  const handlePrintCertificate = (request) => {
+    const data = {
+      fullName: request.resident_name,
+      address: request.address || "N/A",
+      purpose: request.purpose || "General Purpose",
+      ctcNumber: request.ctc_number,
+      validIdType: request.valid_id_type,
+    };
+
+    setCertificateData({
+      typeName: request.type_name,
+      data: data,
+      request,
+    });
+
+    setShowCertificateModal(true);
+  };
 
   const handleApprove = useCallback(
-    async (requestId) => {
-      const result = await approveRequest(requestId);
-      if (result.success) {
-        console.log("Request approved successfully");
-      } else {
-        console.error("Failed to approve request:", result.error);
-      }
-    },
-    [approveRequest]
+    (id) => approveRequest(id),
+    [approveRequest],
   );
-
-  const handleDeny = useCallback(
-    async (requestId) => {
-      const result = await denyRequest(requestId);
-      if (result.success) {
-        console.log("Request denied successfully");
-      } else {
-        console.error("Failed to deny request:", result.error);
-      }
-    },
-    [denyRequest]
-  );
-
+  const handleDeny = useCallback((id) => denyRequest(id), [denyRequest]);
   const handleComplete = useCallback(
-    async (requestId) => {
-      const result = await updateRequestStatus(requestId, "Completed", "Document completed and ready for pickup");
-      if (result.success) {
-        console.log("Request marked as completed successfully");
-      } else {
-        console.error("Failed to mark request as completed:", result.error);
-      }
-    },
-    [updateRequestStatus]
+    (id) => updateRequestStatus(id, "Completed", "Document completed"),
+    [updateRequestStatus],
   );
-
-  const handleViewDetails = useCallback((request) => {
-    setSelectedRequest(request);
-  }, []);
 
   const filteredRequests = useMemo(() => {
     return requests.filter((request) => {
-      const matchesSearch =
+      const matchSearch =
         request.resident_name
-          .toLowerCase()
+          ?.toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        request.type_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (request.purpose &&
-          request.purpose.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      const matchesStatus =
+        request.type_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.purpose || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+      const matchStatus =
         statusFilter === "All" || request.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
+      return matchSearch && matchStatus;
     });
   }, [requests, searchTerm, statusFilter]);
 
   const statsData = useMemo(() => {
     const stats = getStats();
-
     return [
       {
         title: "Pending",
         value: stats.pending,
-        icon: ClockIcon,
+        icon: Clock,
         color: "text-yellow-600",
         bgColor: "bg-yellow-50",
         trend: "Awaiting review",
@@ -572,7 +661,7 @@ function ManageRequests() {
       {
         title: "Approved",
         value: stats.approved,
-        icon: CheckCircleIcon,
+        icon: CheckCircle,
         color: "text-blue-600",
         bgColor: "bg-blue-50",
         trend: "This week",
@@ -580,7 +669,7 @@ function ManageRequests() {
       {
         title: "Completed",
         value: stats.completed,
-        icon: CheckCircleIcon,
+        icon: CheckCircle,
         color: "text-green-600",
         bgColor: "bg-green-50",
         trend: "Total",
@@ -588,7 +677,7 @@ function ManageRequests() {
       {
         title: "Denied",
         value: stats.denied,
-        icon: XCircleIcon,
+        icon: XCircle,
         color: "text-red-600",
         bgColor: "bg-red-50",
         trend: "Total",
@@ -598,30 +687,27 @@ function ManageRequests() {
 
   return (
     <AppSideBar>
-      <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100">
+      <div className="min-h-screen bg-slate-100">
         <NavigationHeader user={user} roleName={roleName} />
-
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-7xl mx-auto px-4 py-8">
           <OfficialOnly>
             <PageHeader
               totalRequests={requests.length}
               pendingCount={getStats().pending}
             />
-
             <StatsCards stats={statsData} />
-
             <FiltersBar
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
             />
-
             <RequestsTable
               requests={filteredRequests}
-              onViewDetails={handleViewDetails}
+              onViewDetails={setSelectedRequest}
               onApprove={handleApprove}
               onDeny={handleDeny}
+              onPrintCertificate={handlePrintCertificate}
               isLoading={isLoading}
             />
           </OfficialOnly>
@@ -634,6 +720,13 @@ function ManageRequests() {
             onApprove={handleApprove}
             onDeny={handleDeny}
             onComplete={handleComplete}
+          />
+        )}
+        {showCertificateModal && certificateData && (
+          <CertificateModal
+            certificateData={certificateData}
+            onClose={() => setShowCertificateModal(false)}
+            user={user}
           />
         )}
       </div>

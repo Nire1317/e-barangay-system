@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -11,12 +11,14 @@ import {
   XCircle,
   Eye,
   Calendar,
+  Printer,
 } from "lucide-react";
 import { useOfficialBarangayRequests } from "../../hooks/useOfficialBarangayRequests";
 import { useAuth } from "../../hooks/useAuth";
 import RequestReviewModal from "../../components/barangay/RequestReviewModal";
 import RequestStatusBadge from "../../components/barangay/RequestStatusBadge";
 import AppSideBar from "../../components/ui/side-bar";
+import { CertificateTemplates } from "../../components/ui/certificateTemplate";
 
 const BarangayRequestsPage = () => {
   const { user } = useAuth();
@@ -37,6 +39,9 @@ const BarangayRequestsPage = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [processingRequest, setProcessingRequest] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
+  const [certificateData, setCertificateData] = useState(null);
+  const printRef = useRef();
 
   // Load initial data
   useEffect(() => {
@@ -79,7 +84,7 @@ const BarangayRequestsPage = () => {
       setProcessingRequest(true);
       await approveRequest(requestId, user.id, notes);
       setSuccessMessage(
-        "Request approved successfully! User has been added to your barangay."
+        "Request approved successfully! User has been added to your barangay.",
       );
 
       // Auto-hide success message after 5 seconds
@@ -151,7 +156,6 @@ const BarangayRequestsPage = () => {
 
   return (
     <AppSideBar>
-      {" "}
       <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -370,23 +374,36 @@ const BarangayRequestsPage = () => {
                           <RequestStatusBadge status={request.status} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {request.status === "Pending" ? (
-                            <button
-                              onClick={() => handleViewRequest(request)}
-                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              <Eye className="w-4 h-4" />
-                              Review
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleViewRequest(request)}
-                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                              <Eye className="w-4 h-4" />
-                              View Details
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {request.status === "Pending" ? (
+                              <button
+                                onClick={() => handleViewRequest(request)}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Review
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleViewRequest(request)}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View Details
+                              </button>
+                            )}
+
+                            {/* Print Certificate Button - only show for approved requests */}
+                            {/* {request.status === "Approved" && (
+                              <button
+                                onClick={() => handlePrintCertificate(request)}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                              >
+                                <Printer className="w-4 h-4" />
+                                Print Certificate
+                              </button>
+                            )} */}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -427,6 +444,85 @@ const BarangayRequestsPage = () => {
             onReject={handleRejectRequest}
             isLoading={processingRequest}
           />
+
+          {/* Certificate Modal */}
+          {showCertificateModal && certificateData && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                {/* Modal Header */}
+                <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Certificate Preview
+                  </h2>
+                  <button
+                    onClick={() => setShowCertificateModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <XCircle className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Certificate Content */}
+                <div ref={printRef} className="p-10">
+                  <div className="max-w-3xl mx-auto border-4 border-double border-gray-800 p-12">
+                    {CertificateTemplates[certificateData.type]?.({
+                      data: certificateData.data,
+                    })}
+
+                    <footer className="mt-12 pt-8">
+                      <p className="text-sm mb-4">
+                        Issued on: <b>{formatDate(new Date())}</b>
+                      </p>
+
+                      <p className="text-sm mb-8">
+                        Issued at: {user?.barangayName || "Luna"}, Roxas,
+                        Isabela
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-8 mt-16">
+                        {[
+                          [
+                            "HON. ROMAR V. CALAMASA",
+                            "Sangguniang Barangay / Officer of the Day",
+                          ],
+                          ["HON. JUANITO V. RAMOS", "Punong Barangay"],
+                        ].map(([name, title], i) => (
+                          <div key={i} className="text-center">
+                            <div className="border-b-2 border-black mb-2 h-16"></div>
+                            <p className="font-bold uppercase text-sm">
+                              {name}
+                            </p>
+                            <p className="text-xs">{title}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="text-center text-xs mt-10 font-semibold">
+                        Not valid without Dry Seal
+                      </p>
+                    </footer>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                {/* <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setShowCertificateModal(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={printCertificate}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print Certificate
+                  </button>
+                </div> */}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </AppSideBar>

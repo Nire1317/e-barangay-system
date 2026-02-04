@@ -1,0 +1,60 @@
+/* Certificate Print Styles */
+
+@media print {
+  /* Remove default margins and padding */
+  @page {
+    size: letter; /* US Letter: 8.5in x 11in */
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hide everything except the certificate */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the certificate container */
+  .certificate-container,
+  .certificate-container * {
+    visibility: visible;
+  }
+
+  /* Position certificate at top of page */
+  .certificate-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Ensure images print correctly */
+  img {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure backgrounds and colors print */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Remove any shadows or effects that might not print well */
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Screen styles for certificate preview */
+@media screen {
+  .certificate-container {
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin: 2rem auto;
+  }
+}
